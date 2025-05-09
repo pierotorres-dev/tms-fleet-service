@@ -11,13 +11,12 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class ObservacionEquipoResponse {
-    private Integer id;
+public class ObservacionEquipoRequest {
     private Integer equipoId;
     private LocalDateTime fecha;
-    private TipoObservacionNeumaticoResponse tipoObservacionNeumaticoResponse;
+    private Integer tipoObservacionId;
     private String descripcion;
-    private EstadoObservacionResponse estadoObservacionResponse;
+    private Integer estadoId;
     private LocalDateTime fechaResolucion;
     private String comentarioResolucion;
     private Integer usuarioResolucion;

@@ -11,13 +11,17 @@ import java.time.LocalDate;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class EquipoResponse {
-    private Integer id;
+public class EquipoRequest {
+
     private String placa;
     private String negocio;
     private String equipo;
+
     private LocalDate fechaInspeccion;
+
     private Integer kilometraje;
-    private EstadoEquipoResponse estadoEquipoResponse;
+
+    private Integer estadoId;
+
     private Integer empresaId;
 }

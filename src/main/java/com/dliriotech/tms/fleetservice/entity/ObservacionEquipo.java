@@ -24,8 +24,8 @@ public class ObservacionEquipo {
 
     private LocalDateTime fecha;
 
-    @Column("tipo_observacion")
-    private String tipo;
+    @Column("id_tipo_observacion")
+    private Integer tipoObservacionId;
 
     private String descripcion;
 
