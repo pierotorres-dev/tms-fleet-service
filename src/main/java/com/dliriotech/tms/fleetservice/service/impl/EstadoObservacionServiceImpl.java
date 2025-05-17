@@ -2,6 +2,7 @@ package com.dliriotech.tms.fleetservice.service.impl;
 
 import com.dliriotech.tms.fleetservice.dto.EstadoObservacionResponse;
 import com.dliriotech.tms.fleetservice.entity.EstadoObservacion;
+import com.dliriotech.tms.fleetservice.exception.CatalogOperationException;
 import com.dliriotech.tms.fleetservice.infrastructure.cache.ReactiveRedisCacheService;
 import com.dliriotech.tms.fleetservice.repository.EstadoObservacionRepository;
 import com.dliriotech.tms.fleetservice.service.EstadoObservacionService;
@@ -36,8 +37,7 @@ public class EstadoObservacionServiceImpl implements EstadoObservacionService {
                         typeRef
                 )
                 .doOnError(error -> log.error("Error al obtener estado de observación", error))
-                .onErrorResume(e -> Flux.error(new RuntimeException(
-                        "Error al obtener estado de observación", e)));
+                .onErrorResume(e -> Flux.error(new CatalogOperationException("estados de observacion de equipo")));
     }
 
     private EstadoObservacionResponse mapToDto(EstadoObservacion entity) {

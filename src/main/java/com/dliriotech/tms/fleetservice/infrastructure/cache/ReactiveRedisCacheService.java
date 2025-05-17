@@ -1,5 +1,6 @@
 package com.dliriotech.tms.fleetservice.infrastructure.cache;
 
+import com.dliriotech.tms.fleetservice.exception.CacheOperationException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -30,10 +31,18 @@ public class ReactiveRedisCacheService implements ReactiveCacheService {
         return redisTemplate.opsForValue().get(cacheKey)
                 .cast(List.class)
                 .flatMapMany(cachedList -> {
-                    log.info("Obteniendo datos desde caché: {}", cacheKey);
-                    return deserializeOnCorrectScheduler(cachedList, typeReference, cacheKey);
+                    try {
+                        log.info("Obteniendo datos desde caché: {}", cacheKey);
+                        return deserializeOnCorrectScheduler(cachedList, typeReference, cacheKey);
+                    } catch (Exception e) {
+                        throw new CacheOperationException(cacheKey);
+                    }
                 })
                 .onErrorResume(error -> {
+                    if (error instanceof CacheOperationException) {
+                        log.error("Error específico de caché: {}", error.getMessage());
+                        return Flux.error(error);
+                    }
                     log.error("Error al recuperar datos de caché {}: {}", cacheKey, error.getMessage());
                     return Flux.empty();
                 })

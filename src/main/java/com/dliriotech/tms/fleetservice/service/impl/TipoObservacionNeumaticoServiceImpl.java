@@ -2,6 +2,7 @@ package com.dliriotech.tms.fleetservice.service.impl;
 
 import com.dliriotech.tms.fleetservice.dto.TipoObservacionNeumaticoResponse;
 import com.dliriotech.tms.fleetservice.entity.TipoObservacionNeumatico;
+import com.dliriotech.tms.fleetservice.exception.CatalogOperationException;
 import com.dliriotech.tms.fleetservice.infrastructure.cache.ReactiveRedisCacheService;
 import com.dliriotech.tms.fleetservice.repository.TipoObservacionNeumaticoRepository;
 import com.dliriotech.tms.fleetservice.service.TipoObservacionNeumaticoService;
@@ -12,7 +13,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 
-import java.time.Duration;
 import java.util.List;
 
 @Service
@@ -37,8 +37,7 @@ public class TipoObservacionNeumaticoServiceImpl implements TipoObservacionNeuma
                         typeRef
                 )
                 .doOnError(error -> log.error("Error al obtener tipos de observación neumático", error))
-                .onErrorResume(e -> Flux.error(new RuntimeException(
-                        "Error al obtener tipos de observación neumático", e)));
+                .onErrorResume(e -> Flux.error(new CatalogOperationException("tipos de observacion de neumático")));
     }
 
     private TipoObservacionNeumaticoResponse mapToDto(TipoObservacionNeumatico entity) {
