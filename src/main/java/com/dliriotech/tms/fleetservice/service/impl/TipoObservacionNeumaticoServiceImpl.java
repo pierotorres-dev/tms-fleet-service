@@ -2,13 +2,18 @@ package com.dliriotech.tms.fleetservice.service.impl;
 
 import com.dliriotech.tms.fleetservice.dto.TipoObservacionNeumaticoResponse;
 import com.dliriotech.tms.fleetservice.entity.TipoObservacionNeumatico;
+import com.dliriotech.tms.fleetservice.infrastructure.cache.ReactiveRedisCacheService;
 import com.dliriotech.tms.fleetservice.repository.TipoObservacionNeumaticoRepository;
 import com.dliriotech.tms.fleetservice.service.TipoObservacionNeumaticoService;
+import com.fasterxml.jackson.core.type.TypeReference;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
-import reactor.core.scheduler.Schedulers;
+
+import java.time.Duration;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -16,26 +21,23 @@ import reactor.core.scheduler.Schedulers;
 public class TipoObservacionNeumaticoServiceImpl implements TipoObservacionNeumaticoService {
 
     private final TipoObservacionNeumaticoRepository tipoObservacionNeumaticoRepository;
+    private final ReactiveRedisCacheService cacheService;
+
+    @Value("${app.cache.prefixes.tipo-observacion-neumatico}")
+    private String cacheKey;
 
     @Override
     public Flux<TipoObservacionNeumaticoResponse> getAllTipoObservacionNeumatico() {
-        return tipoObservacionNeumaticoRepository.findAll()
-                .map(this::mapToDto)
-                .subscribeOn(Schedulers.boundedElastic())
-                .doOnSubscribe(s -> log.info("Iniciando consulta de tipos de observación neumático"))
-                .doOnComplete(() -> log.info("Consulta de tipos de observación neumático completada"))
-                .doOnError(error -> log.error("Error al obtener tipos de observación neumático", error))
-                .onErrorResume(throwable -> {
-                    if (throwable instanceof RuntimeException) {
-                        return Flux.error(throwable);
-                    }
-                    return Flux.error(new RuntimeException("Error al obtener tipos de observación neumático"));
-                    //TODO: Manejar el error de manera adecuada
-                })
-                .switchIfEmpty(Flux.defer(() -> {
-                    log.warn("No se encontraron tipos de observación neumático");
-                    return Flux.empty();
-                }));
+        TypeReference<List<TipoObservacionNeumaticoResponse>> typeRef =
+                new TypeReference<>() {};
+
+        return cacheService.getCachedCollection(
+                        cacheKey,
+                        tipoObservacionNeumaticoRepository.findAll().map(this::mapToDto),
+                        typeRef
+                ).doOnError(error -> log.error("Error al obtener tipos de observación neumático", error))
+                .onErrorResume(e -> Flux.error(new RuntimeException(
+                        "Error al obtener tipos de observación neumático", e)));
     }
 
     private TipoObservacionNeumaticoResponse mapToDto(TipoObservacionNeumatico entity) {

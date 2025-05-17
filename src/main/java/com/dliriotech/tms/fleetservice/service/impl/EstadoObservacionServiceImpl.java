@@ -2,13 +2,17 @@ package com.dliriotech.tms.fleetservice.service.impl;
 
 import com.dliriotech.tms.fleetservice.dto.EstadoObservacionResponse;
 import com.dliriotech.tms.fleetservice.entity.EstadoObservacion;
+import com.dliriotech.tms.fleetservice.infrastructure.cache.ReactiveRedisCacheService;
 import com.dliriotech.tms.fleetservice.repository.EstadoObservacionRepository;
 import com.dliriotech.tms.fleetservice.service.EstadoObservacionService;
+import com.fasterxml.jackson.core.type.TypeReference;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
-import reactor.core.scheduler.Schedulers;
+
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -16,26 +20,23 @@ import reactor.core.scheduler.Schedulers;
 public class EstadoObservacionServiceImpl implements EstadoObservacionService {
 
     private final EstadoObservacionRepository estadoObservacionRepository;
+    private final ReactiveRedisCacheService cacheService;
+
+    @Value("${app.cache.prefixes.estado-observacion}")
+    private String cacheKey;
 
     @Override
     public Flux<EstadoObservacionResponse> getAllEstadoObservacion() {
-        return estadoObservacionRepository.findAll()
-                .map(this::mapToDto)
-                .subscribeOn(Schedulers.boundedElastic())
-                .doOnSubscribe(s -> log.info("Iniciando consulta de estados de observación"))
-                .doOnComplete(() -> log.info("Consulta de estados de observación completada"))
-                .doOnError(error -> log.error("Error al obtener estados de observación", error))
-                .onErrorResume(throwable -> {
-                    if (throwable instanceof RuntimeException) {
-                        return Flux.error(throwable);
-                    }
-                    return Flux.error(new RuntimeException("Error al obtener estados de observación"));
-                    //TODO: Manejar el error de manera adecuada
-                })
-                .switchIfEmpty(Flux.defer(() -> {
-                    log.warn("No se encontraron estados de observación");
-                    return Flux.empty();
-                }));
+        TypeReference<List<EstadoObservacionResponse>> typeRef =
+                new TypeReference<>() {};
+
+        return cacheService.getCachedCollection(
+                        cacheKey,
+                        estadoObservacionRepository.findAll().map(this::mapToDto),
+                        typeRef
+                ).doOnError(error -> log.error("Error al obtener tipos de observación neumático", error))
+                .onErrorResume(e -> Flux.error(new RuntimeException(
+                        "Error al obtener tipos de observación neumático", e)));
     }
 
     private EstadoObservacionResponse mapToDto(EstadoObservacion entity) {
