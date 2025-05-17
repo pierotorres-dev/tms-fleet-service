@@ -35,7 +35,8 @@ public class TipoObservacionNeumaticoServiceImpl implements TipoObservacionNeuma
                         cacheKey,
                         tipoObservacionNeumaticoRepository.findAll().map(this::mapToDto),
                         typeRef
-                ).doOnError(error -> log.error("Error al obtener tipos de observación neumático", error))
+                )
+                .doOnError(error -> log.error("Error al obtener tipos de observación neumático", error))
                 .onErrorResume(e -> Flux.error(new RuntimeException(
                         "Error al obtener tipos de observación neumático", e)));
     }

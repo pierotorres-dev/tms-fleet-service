@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.ReactiveRedisTemplate;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
 import java.time.Duration;
@@ -24,35 +25,52 @@ public class ReactiveRedisCacheService implements ReactiveCacheService {
     private long cacheTtlHours;
 
     @Override
-    public <T> Flux<T> getCachedCollection(String cacheKey, Flux<T> dbFallback, TypeReference<List<T>> typeReference) {
+    public <T> Flux<T> getCachedCollection(String cacheKey, Flux<T> dbFallback,
+                                           TypeReference<List<T>> typeReference) {
         return redisTemplate.opsForValue().get(cacheKey)
                 .cast(List.class)
                 .flatMapMany(cachedList -> {
                     log.info("Obteniendo datos desde caché: {}", cacheKey);
-                    try {
-                        List<T> typedList = objectMapper.convertValue(cachedList, typeReference);
-                        return Flux.fromIterable(typedList);
-                    } catch (Exception e) {
-                        log.warn("Error al convertir datos de caché {}: {}", cacheKey, e.getMessage());
-                        return Flux.empty();
-                    }
+                    return deserializeOnCorrectScheduler(cachedList, typeReference, cacheKey);
                 })
-                .switchIfEmpty(cacheCollection(cacheKey, dbFallback))
-                .subscribeOn(Schedulers.boundedElastic());
+                .onErrorResume(error -> {
+                    log.error("Error al recuperar datos de caché {}: {}", cacheKey, error.getMessage());
+                    return Flux.empty();
+                })
+                .switchIfEmpty(cacheCollection(cacheKey, dbFallback));
     }
 
     @Override
     public <T> Flux<T> cacheCollection(String cacheKey, Flux<T> source) {
         Duration ttl = Duration.ofHours(cacheTtlHours);
-        return source.collectList()
+        return source
+                .collectList()
                 .flatMapMany(list -> {
-                    if (!list.isEmpty()) {
-                        return redisTemplate.opsForValue().set(cacheKey, list, ttl)
-                                .thenMany(Flux.fromIterable(list))
-                                .doOnComplete(() -> log.info("Datos almacenados en caché: {}", cacheKey));
+                    if (list.isEmpty()) {
+                        log.warn("No se encontraron datos para cachear: {}", cacheKey);
+                        return Flux.empty();
                     }
-                    log.warn("No se encontraron datos para cachear: {}", cacheKey);
-                    return Flux.empty();
+
+                    return redisTemplate.opsForValue()
+                            .set(cacheKey, list, ttl)
+                            .then(Mono.just(list))
+                            .flatMapMany(Flux::fromIterable)
+                            .doOnComplete(() -> log.info("Datos almacenados en caché: {}", cacheKey));
                 });
+    }
+
+    private <T> Flux<T> deserializeOnCorrectScheduler(List<?> cachedList,
+                                                      TypeReference<List<T>> typeRef,
+                                                      String cacheKey) {
+        return Mono.fromCallable(() -> {
+                    try {
+                        return objectMapper.convertValue(cachedList, typeRef);
+                    } catch (Exception e) {
+                        log.warn("Error al convertir datos de caché {}: {}", cacheKey, e.getMessage());
+                        return List.<T>of();
+                    }
+                })
+                .subscribeOn(Schedulers.boundedElastic())
+                .flatMapMany(Flux::fromIterable);
     }
 }

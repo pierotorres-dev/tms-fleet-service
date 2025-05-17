@@ -34,9 +34,10 @@ public class EstadoObservacionServiceImpl implements EstadoObservacionService {
                         cacheKey,
                         estadoObservacionRepository.findAll().map(this::mapToDto),
                         typeRef
-                ).doOnError(error -> log.error("Error al obtener tipos de observación neumático", error))
+                )
+                .doOnError(error -> log.error("Error al obtener estado de observación", error))
                 .onErrorResume(e -> Flux.error(new RuntimeException(
-                        "Error al obtener tipos de observación neumático", e)));
+                        "Error al obtener estado de observación", e)));
     }
 
     private EstadoObservacionResponse mapToDto(EstadoObservacion entity) {
