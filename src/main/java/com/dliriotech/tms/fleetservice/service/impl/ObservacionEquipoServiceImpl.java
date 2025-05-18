@@ -37,7 +37,8 @@ public class ObservacionEquipoServiceImpl implements ObservacionEquipoService {
                 .doOnSubscribe(s -> log.debug("Iniciando consulta a la lista de observaciones del equipo {}", equipoId))
                 .doOnComplete(() -> log.debug("Consulta a la lista de observaciones del equipo {} completada", equipoId))
                 .doOnError(error -> log.error("Error al obtener observaciones para el equipo {}: {}", equipoId, error.getMessage()))
-                .onErrorResume(e -> Flux.error(new CatalogOperationException("observaciones del equipo " + equipoId)));
+                .onErrorResume(e -> Flux.error(new ObservacionEquipoException(
+                        "FLEET-OBS-OPE-001", "Error al obtener observaciones del equipo " + equipoId)));
     }
 
     @Override
@@ -50,7 +51,8 @@ public class ObservacionEquipoServiceImpl implements ObservacionEquipoService {
                 .doOnSubscribe(s -> log.debug("Iniciando guardado de nueva observación para el equipo {}", entity.getEquipoId()))
                 .doOnSuccess(result -> log.debug("Observación de equipo guardada exitosamente: {}", result.getId()))
                 .doOnError(error -> log.error("Error al guardar observación de equipo: {}", error.getMessage()))
-                .onErrorResume(e -> Mono.error(new CatalogOperationException("guardado de observación")));
+                .onErrorResume(e -> Mono.error(new ObservacionEquipoException(
+                        "FLEET-OBS-OPE-002", "Error al guardar observación de equipo")));
     }
 
     @Override
@@ -66,7 +68,8 @@ public class ObservacionEquipoServiceImpl implements ObservacionEquipoService {
                 .doOnSuccess(result -> log.debug("Observación {} actualizada exitosamente", id))
                 .doOnError(error -> log.error("Error al actualizar observación {}: {}", id, error.getMessage()))
                 .onErrorResume(e -> e instanceof ResourceNotFoundException ? Mono.error(e) :
-                        Mono.error(new CatalogOperationException("actualización de observación")));
+                        Mono.error(new ObservacionEquipoException(
+                                "FLEET-OBS-OPE-004", "Error al actualizar observación " + id)));
     }
 
     public Mono<Integer> updateEstadoObservacionesByEquipoId(Integer equipoId, Integer nuevoEstadoId) {
@@ -76,7 +79,7 @@ public class ObservacionEquipoServiceImpl implements ObservacionEquipoService {
                 .doOnError(error -> log.error("Error al actualizar estados de observaciones para equipo {}: {}",
                         equipoId, error.getMessage()))
                 .onErrorResume(e -> Mono.error(new ObservacionEquipoException(
-                        "Error en actualización masiva de estados para equipo " + equipoId)));
+                        "FLEET-OBS-OPE-003", "Error al actualizar estado de observaciones para equipo " + equipoId)));
     }
 
     private Mono<ObservacionEquipoResponse> enrichObservacionWithRelations(ObservacionEquipo observacion) {
