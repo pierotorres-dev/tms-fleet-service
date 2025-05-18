@@ -59,6 +59,16 @@ class GlobalExceptionHandler extends AbstractErrorWebExceptionHandler {
         handlers.put(CatalogOperationException.class, ex ->
                 new ErrorDetails(HttpStatus.INTERNAL_SERVER_ERROR, ((BaseException)ex).getCode(), ex.getMessage()));
 
+        handlers.put(ObservacionEquipoException.class, ex ->
+                new ErrorDetails(HttpStatus.INTERNAL_SERVER_ERROR, ((BaseException)ex).getCode(), ex.getMessage()));
+
+        handlers.put(ObservacionEquipoNotFoundException.class, ex ->
+                new ErrorDetails(HttpStatus.NOT_FOUND, ((BaseException)ex).getCode(), ex.getMessage()));
+
+        handlers.put(Exception.class, ex ->
+                new ErrorDetails(HttpStatus.INTERNAL_SERVER_ERROR, "FLEET-SYS-ERR-001",
+                        "Error interno del servidor: " + ex.getMessage()));
+
         return handlers;
     }
 
@@ -72,7 +82,7 @@ class GlobalExceptionHandler extends AbstractErrorWebExceptionHandler {
                 .map(entry -> entry.getValue().apply(error))
                 .orElse(new ErrorDetails(
                         HttpStatus.INTERNAL_SERVER_ERROR,
-                        "SYS-001",
+                        "FLEET-SYS-ERR-001",
                         "Error interno del servidor"
                 ));
 
