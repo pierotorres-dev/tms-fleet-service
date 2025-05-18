@@ -5,7 +5,6 @@ import com.dliriotech.tms.fleetservice.dto.ObservacionEquipoRequest;
 import com.dliriotech.tms.fleetservice.dto.ObservacionEquipoResponse;
 import com.dliriotech.tms.fleetservice.dto.TipoObservacionNeumaticoResponse;
 import com.dliriotech.tms.fleetservice.entity.ObservacionEquipo;
-import com.dliriotech.tms.fleetservice.exception.CatalogOperationException;
 import com.dliriotech.tms.fleetservice.exception.ObservacionEquipoException;
 import com.dliriotech.tms.fleetservice.exception.ResourceNotFoundException;
 import com.dliriotech.tms.fleetservice.repository.ObservacionEquipoRepository;
