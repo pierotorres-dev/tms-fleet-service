@@ -30,7 +30,9 @@ public class SecurityConfig {
                 .cors(corsSpec -> corsSpec.configurationSource(corsConfigurationSource()))
                 .authorizeExchange(exchanges -> exchanges
                         .pathMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**", "/webjars/**", "/openapi.yaml").permitAll()
-                        .pathMatchers("/api/v1/catalogos/*").permitAll()
+                        .pathMatchers("/api/v1/equipos/**").permitAll()
+                        .pathMatchers("/api/v1/observaciones-equipo/**").permitAll()
+                        .pathMatchers("/api/v1/catalogos/**").permitAll()
                         .anyExchange().authenticated()
                 )
                 .addFilterBefore(serviceAuthFilter, SecurityWebFiltersOrder.AUTHENTICATION)
