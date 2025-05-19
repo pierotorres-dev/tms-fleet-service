@@ -4,6 +4,7 @@ import com.dliriotech.tms.fleetservice.dto.EquipoRequest;
 import com.dliriotech.tms.fleetservice.dto.EquipoResponse;
 import com.dliriotech.tms.fleetservice.dto.EstadoEquipoResponse;
 import com.dliriotech.tms.fleetservice.entity.Equipo;
+import com.dliriotech.tms.fleetservice.exception.DuplicatePlacaException;
 import com.dliriotech.tms.fleetservice.exception.EquipoException;
 import com.dliriotech.tms.fleetservice.exception.EquipoNotFoundException;
 import com.dliriotech.tms.fleetservice.repository.EquipoRepository;
@@ -55,8 +56,13 @@ public class EquipoServiceImpl implements EquipoService {
                 .doOnSubscribe(s -> log.debug("Iniciando guardado de nuevo equipo"))
                 .doOnSuccess(result -> log.debug("Equipo guardado exitosamente: {}", result.getId()))
                 .doOnError(error -> log.error("Error al guardar equipo: {}", error.getMessage()))
-                .onErrorResume(e -> Mono.error(new EquipoException(
-                        "FLEET-EQP-OPE-002", "Error al guardar equipo")));
+                .onErrorResume(e -> {
+                    if (e instanceof org.springframework.dao.DuplicateKeyException) {
+                        return Mono.error(new DuplicatePlacaException(equipoRequest.getPlaca()));
+                    }
+                    return Mono.error(new EquipoException(
+                            "FLEET-EQP-OPE-002", "Error al guardar equipo"));
+                });
     }
 
     @Override

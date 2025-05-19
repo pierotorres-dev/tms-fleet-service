@@ -51,16 +51,21 @@ class GlobalExceptionHandler extends AbstractErrorWebExceptionHandler {
         });
 
         handlers.put(CacheOperationException.class, ex ->
-                new ErrorDetails(HttpStatus.INTERNAL_SERVER_ERROR, ((BaseException)ex).getCode(), ex.getMessage()));
+                new ErrorDetails(HttpStatus.INTERNAL_SERVER_ERROR, ((BaseException) ex).getCode(), ex.getMessage()));
 
         handlers.put(CatalogOperationException.class, ex ->
-                new ErrorDetails(HttpStatus.INTERNAL_SERVER_ERROR, ((BaseException)ex).getCode(), ex.getMessage()));
+                new ErrorDetails(HttpStatus.INTERNAL_SERVER_ERROR, ((BaseException) ex).getCode(), ex.getMessage()));
 
         handlers.put(ObservacionEquipoException.class, ex ->
-                new ErrorDetails(HttpStatus.INTERNAL_SERVER_ERROR, ((BaseException)ex).getCode(), ex.getMessage()));
+                new ErrorDetails(HttpStatus.INTERNAL_SERVER_ERROR, ((BaseException) ex).getCode(), ex.getMessage()));
 
         handlers.put(ObservacionEquipoNotFoundException.class, ex ->
-                new ErrorDetails(HttpStatus.NOT_FOUND, ((BaseException)ex).getCode(), ex.getMessage()));
+                new ErrorDetails(HttpStatus.NOT_FOUND, ((BaseException) ex).getCode(), ex.getMessage()));
+
+        handlers.put(DuplicatePlacaException.class, ex -> {
+            DuplicatePlacaException duplicateEx = (DuplicatePlacaException) ex;
+            return new ErrorDetails(duplicateEx.getStatus(), duplicateEx.getCode(), duplicateEx.getMessage());
+        });
 
         handlers.put(Exception.class, ex ->
                 new ErrorDetails(HttpStatus.INTERNAL_SERVER_ERROR, "FLEET-SYS-ERR-001",
@@ -95,5 +100,6 @@ class GlobalExceptionHandler extends AbstractErrorWebExceptionHandler {
                 .body(BodyInserters.fromValue(errorResponse));
     }
 
-    private record ErrorDetails(HttpStatus status, String code, String message) {}
+    private record ErrorDetails(HttpStatus status, String code, String message) {
+    }
 }
