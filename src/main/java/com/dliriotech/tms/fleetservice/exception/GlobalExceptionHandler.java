@@ -50,14 +50,26 @@ class GlobalExceptionHandler extends AbstractErrorWebExceptionHandler {
             return new ErrorDetails(baseEx.getStatus(), baseEx.getCode(), baseEx.getMessage());
         });
 
-        handlers.put(ResourceNotFoundException.class, ex ->
-                new ErrorDetails(HttpStatus.NOT_FOUND, ((BaseException)ex).getCode(), ex.getMessage()));
-
         handlers.put(CacheOperationException.class, ex ->
-                new ErrorDetails(HttpStatus.INTERNAL_SERVER_ERROR, ((BaseException)ex).getCode(), ex.getMessage()));
+                new ErrorDetails(HttpStatus.INTERNAL_SERVER_ERROR, ((BaseException) ex).getCode(), ex.getMessage()));
 
         handlers.put(CatalogOperationException.class, ex ->
-                new ErrorDetails(HttpStatus.INTERNAL_SERVER_ERROR, ((BaseException)ex).getCode(), ex.getMessage()));
+                new ErrorDetails(HttpStatus.INTERNAL_SERVER_ERROR, ((BaseException) ex).getCode(), ex.getMessage()));
+
+        handlers.put(ObservacionEquipoException.class, ex ->
+                new ErrorDetails(HttpStatus.INTERNAL_SERVER_ERROR, ((BaseException) ex).getCode(), ex.getMessage()));
+
+        handlers.put(ObservacionEquipoNotFoundException.class, ex ->
+                new ErrorDetails(HttpStatus.NOT_FOUND, ((BaseException) ex).getCode(), ex.getMessage()));
+
+        handlers.put(DuplicatePlacaException.class, ex -> {
+            DuplicatePlacaException duplicateEx = (DuplicatePlacaException) ex;
+            return new ErrorDetails(duplicateEx.getStatus(), duplicateEx.getCode(), duplicateEx.getMessage());
+        });
+
+        handlers.put(Exception.class, ex ->
+                new ErrorDetails(HttpStatus.INTERNAL_SERVER_ERROR, "FLEET-SYS-ERR-001",
+                        "Error interno del servidor: " + ex.getMessage()));
 
         return handlers;
     }
@@ -72,7 +84,7 @@ class GlobalExceptionHandler extends AbstractErrorWebExceptionHandler {
                 .map(entry -> entry.getValue().apply(error))
                 .orElse(new ErrorDetails(
                         HttpStatus.INTERNAL_SERVER_ERROR,
-                        "SYS-001",
+                        "FLEET-SYS-ERR-001",
                         "Error interno del servidor"
                 ));
 
@@ -88,5 +100,6 @@ class GlobalExceptionHandler extends AbstractErrorWebExceptionHandler {
                 .body(BodyInserters.fromValue(errorResponse));
     }
 
-    private record ErrorDetails(HttpStatus status, String code, String message) {}
+    private record ErrorDetails(HttpStatus status, String code, String message) {
+    }
 }
