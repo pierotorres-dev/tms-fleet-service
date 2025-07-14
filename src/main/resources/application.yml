@@ -64,9 +64,6 @@ springdoc:
     url: /openapi.yaml
     path: /swagger-ui.html
 
-service:
-  api-gateway-key: ${API_GATEWAY_KEY}
-
 app:
   cache:
     ttl-hours: 24
