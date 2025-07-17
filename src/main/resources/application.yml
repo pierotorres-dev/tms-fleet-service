@@ -49,8 +49,7 @@ management:
         http.server.requests: true
     enable:
       r2dbc:
-        client:
-          true
+        client: true
 
 # Logging estructurado
 logging:
