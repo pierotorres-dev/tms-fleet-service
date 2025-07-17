@@ -47,6 +47,10 @@ management:
     distribution:
       percentiles-histogram:
         http.server.requests: true
+    enable:
+      r2dbc:
+        client:
+          true
 
 # Logging estructurado
 logging:
