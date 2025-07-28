@@ -7,7 +7,7 @@ spring:
     password: ${DB_PASS}
     pool:
       initial-size: 10
-      max-size: 40
+      max-size: 30
       max-idle-time: 10m
       max-create-connection-time: 2s
       validation-query: SELECT 1
@@ -77,6 +77,8 @@ app:
       estado-equipo: "cache:estadoEquipo:all"
       estado-observacion: "cache:estadoObservacion:all"
       tipo-observacion-neumatico: "cache:tipoObservacionNeumatico:all"
+      tipo-equipo: "cache:tipoEquipo"
+      esquema-equipo: "cache:esquemaEquipo"
 
 server:
   port: 8082
