@@ -8,34 +8,22 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.relational.core.mapping.Column;
 import org.springframework.data.relational.core.mapping.Table;
 
-import java.time.LocalDate;
-
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@Table("equipos")
-public class Equipo {
+@Table("esquemas_equipo")
+public class EsquemaEquipo {
+
     @Id
     private Integer id;
-
-    private String placa;
-    private String negocio;
 
     @Column("id_tipo_equipo")
     private Integer tipoEquipoId;
 
-    @Column("id_esquema_equipo")
-    private Integer esquemaEquipoId;
+    @Column("nombre_esquema")
+    private String nombreEsquema;
 
-    @Column("fecha_inspeccion")
-    private LocalDate fechaInspeccion;
-
-    private Integer kilometraje;
-
-    @Column("id_estado_equipo")
-    private Integer estadoId;
-
-    @Column("id_empresa")
-    private Integer empresaId;
+    @Column("total_posiciones")
+    private Integer totalPosiciones;
 }

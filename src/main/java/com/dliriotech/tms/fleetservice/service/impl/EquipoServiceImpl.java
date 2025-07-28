@@ -2,12 +2,16 @@ package com.dliriotech.tms.fleetservice.service.impl;
 
 import com.dliriotech.tms.fleetservice.dto.EquipoRequest;
 import com.dliriotech.tms.fleetservice.dto.EquipoResponse;
+import com.dliriotech.tms.fleetservice.dto.EsquemaEquipoResponse;
 import com.dliriotech.tms.fleetservice.dto.EstadoEquipoResponse;
+import com.dliriotech.tms.fleetservice.dto.TipoEquipoResponse;
 import com.dliriotech.tms.fleetservice.entity.Equipo;
 import com.dliriotech.tms.fleetservice.exception.DuplicatePlacaException;
 import com.dliriotech.tms.fleetservice.exception.EquipoException;
 import com.dliriotech.tms.fleetservice.exception.EquipoNotFoundException;
 import com.dliriotech.tms.fleetservice.repository.EquipoRepository;
+import com.dliriotech.tms.fleetservice.repository.EsquemaEquipoRepository;
+import com.dliriotech.tms.fleetservice.repository.TipoEquipoRepository;
 import com.dliriotech.tms.fleetservice.service.EquipoService;
 import com.dliriotech.tms.fleetservice.service.EstadoEquipoService;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +28,8 @@ public class EquipoServiceImpl implements EquipoService {
 
     private final EquipoRepository equipoRepository;
     private final EstadoEquipoService estadoEquipoService;
+    private final TipoEquipoRepository tipoEquipoRepository;
+    private final EsquemaEquipoRepository esquemaEquipoRepository;
 
     @Override
     public Flux<EquipoResponse> getAllEquiposByEmpresaId(Integer empresaId) {
@@ -77,9 +83,9 @@ public class EquipoServiceImpl implements EquipoService {
                 .doOnSubscribe(s -> log.debug("Iniciando actualización de equipo {}", id))
                 .doOnSuccess(result -> log.debug("Equipo {} actualizado exitosamente", id))
                 .doOnError(error -> log.error("Error al actualizar equipo {}: {}", id, error.getMessage()))
-                .onErrorResume(e -> e instanceof EquipoNotFoundException ? Mono.error(e) :
-                        Mono.error(new EquipoException(
-                                "FLEET-EQP-OPE-003", "Error al actualizar equipo " + id)));
+                .onErrorResume(e -> e instanceof EquipoNotFoundException ? Mono.error(e)
+                        : Mono.error(new EquipoException(
+                        "FLEET-EQP-OPE-003", "Error al actualizar equipo " + id)));
     }
 
     @Override
@@ -94,28 +100,54 @@ public class EquipoServiceImpl implements EquipoService {
                 .doOnSubscribe(s -> log.debug("Iniciando actualización de estado para equipo {}", id))
                 .doOnSuccess(result -> log.debug("Estado del equipo {} actualizado a {}", id, estadoId))
                 .doOnError(error -> log.error("Error al actualizar estado del equipo {}: {}", id, error.getMessage()))
-                .onErrorResume(e -> e instanceof EquipoNotFoundException ? Mono.error(e) :
-                        Mono.error(new EquipoException(
-                                "FLEET-EQP-OPE-004", "Error al actualizar estado del equipo " + id)));
+                .onErrorResume(e -> e instanceof EquipoNotFoundException ? Mono.error(e)
+                        : Mono.error(new EquipoException(
+                        "FLEET-EQP-OPE-004", "Error al actualizar estado del equipo " + id)));
     }
 
     private Mono<EquipoResponse> enrichEquipoWithRelations(Equipo equipo) {
-        return estadoEquipoService
+        Mono<EstadoEquipoResponse> estadoMono = estadoEquipoService
                 .getAllEstadoEquipo()
                 .filter(estado -> estado.getId().equals(equipo.getEstadoId()))
                 .next()
                 .switchIfEmpty(Mono.error(new EquipoException(
-                        "FLEET-EQP-NF-001", "Estado de equipo no encontrado: " + equipo.getEstadoId())))
-                .flatMap(estado -> Mono.fromCallable(() ->
-                                mapEntityToResponse(equipo, estado))
-                        .subscribeOn(Schedulers.boundedElastic()));
+                        "FLEET-EQP-NF-001", "Estado de equipo no encontrado: " + equipo.getEstadoId())));
+
+        Mono<TipoEquipoResponse> tipoMono = tipoEquipoRepository
+                .findById(equipo.getTipoEquipoId())
+                .switchIfEmpty(Mono.error(new EquipoException(
+                        "FLEET-EQP-NF-002", "Tipo de equipo no encontrado: " + equipo.getTipoEquipoId())))
+                .map(tipoEquipo -> TipoEquipoResponse.builder()
+                        .id(tipoEquipo.getId())
+                        .nombre(tipoEquipo.getNombre())
+                        .descripcion(tipoEquipo.getDescripcion())
+                        .build());
+
+        Mono<EsquemaEquipoResponse> esquemaMono = esquemaEquipoRepository
+                .findById(equipo.getEsquemaEquipoId())
+                .switchIfEmpty(Mono.error(new EquipoException(
+                        "FLEET-EQP-NF-003", "Esquema de equipo no encontrado: " + equipo.getEsquemaEquipoId())))
+                .map(esquemaEquipo -> EsquemaEquipoResponse.builder()
+                        .id(esquemaEquipo.getId())
+                        .nombreEsquema(esquemaEquipo.getNombreEsquema())
+                        .totalPosiciones(esquemaEquipo.getTotalPosiciones())
+                        .build());
+
+        return Mono.zip(
+                estadoMono.subscribeOn(Schedulers.boundedElastic()),
+                tipoMono.subscribeOn(Schedulers.boundedElastic()),
+                esquemaMono.subscribeOn(Schedulers.boundedElastic())
+        ).flatMap(tuple -> Mono
+                .fromCallable(() -> mapEntityToResponse(equipo, tuple.getT1(), tuple.getT2(), tuple.getT3()))
+                .subscribeOn(Schedulers.boundedElastic()));
     }
 
     private Equipo mapRequestToEntity(EquipoRequest request) {
         return Equipo.builder()
                 .placa(request.getPlaca())
                 .negocio(request.getNegocio())
-                .equipo(request.getEquipo())
+                .tipoEquipoId(request.getTipoEquipoId())
+                .esquemaEquipoId(request.getEsquemaEquipoId())
                 .fechaInspeccion(request.getFechaInspeccion())
                 .kilometraje(request.getKilometraje())
                 .estadoId(request.getEstadoId())
@@ -123,12 +155,17 @@ public class EquipoServiceImpl implements EquipoService {
                 .build();
     }
 
-    private EquipoResponse mapEntityToResponse(Equipo entity, EstadoEquipoResponse estado) {
+    private EquipoResponse mapEntityToResponse(
+            Equipo entity,
+            EstadoEquipoResponse estado,
+            TipoEquipoResponse tipoEquipo,
+            EsquemaEquipoResponse esquemaEquipo) {
         return EquipoResponse.builder()
                 .id(entity.getId())
                 .placa(entity.getPlaca())
                 .negocio(entity.getNegocio())
-                .equipo(entity.getEquipo())
+                .tipoEquipoResponse(tipoEquipo)
+                .esquemaEquipoResponse(esquemaEquipo)
                 .fechaInspeccion(entity.getFechaInspeccion())
                 .kilometraje(entity.getKilometraje())
                 .estadoEquipoResponse(estado)
@@ -137,12 +174,21 @@ public class EquipoServiceImpl implements EquipoService {
     }
 
     private void updateEntityFromRequest(Equipo entity, EquipoRequest request) {
-        if (request.getPlaca() != null) entity.setPlaca(request.getPlaca());
-        if (request.getNegocio() != null) entity.setNegocio(request.getNegocio());
-        if (request.getEquipo() != null) entity.setEquipo(request.getEquipo());
-        if (request.getFechaInspeccion() != null) entity.setFechaInspeccion(request.getFechaInspeccion());
-        if (request.getKilometraje() != null) entity.setKilometraje(request.getKilometraje());
-        if (request.getEstadoId() != null) entity.setEstadoId(request.getEstadoId());
-        if (request.getEmpresaId() != null) entity.setEmpresaId(request.getEmpresaId());
+        if (request.getPlaca() != null)
+            entity.setPlaca(request.getPlaca());
+        if (request.getNegocio() != null)
+            entity.setNegocio(request.getNegocio());
+        if (request.getTipoEquipoId() != null)
+            entity.setTipoEquipoId(request.getTipoEquipoId());
+        if (request.getEsquemaEquipoId() != null)
+            entity.setEsquemaEquipoId(request.getEsquemaEquipoId());
+        if (request.getFechaInspeccion() != null)
+            entity.setFechaInspeccion(request.getFechaInspeccion());
+        if (request.getKilometraje() != null)
+            entity.setKilometraje(request.getKilometraje());
+        if (request.getEstadoId() != null)
+            entity.setEstadoId(request.getEstadoId());
+        if (request.getEmpresaId() != null)
+            entity.setEmpresaId(request.getEmpresaId());
     }
 }

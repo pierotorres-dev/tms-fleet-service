@@ -15,7 +15,8 @@ public class EquipoRequest {
 
     private String placa;
     private String negocio;
-    private String equipo;
+    private Integer tipoEquipoId;
+    private Integer esquemaEquipoId;
 
     private LocalDate fechaInspeccion;
 
