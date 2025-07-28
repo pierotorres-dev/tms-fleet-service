@@ -10,10 +10,8 @@ import com.dliriotech.tms.fleetservice.exception.DuplicatePlacaException;
 import com.dliriotech.tms.fleetservice.exception.EquipoException;
 import com.dliriotech.tms.fleetservice.exception.EquipoNotFoundException;
 import com.dliriotech.tms.fleetservice.repository.EquipoRepository;
-import com.dliriotech.tms.fleetservice.repository.EsquemaEquipoRepository;
-import com.dliriotech.tms.fleetservice.repository.TipoEquipoRepository;
+import com.dliriotech.tms.fleetservice.service.EquipoEntityCacheService;
 import com.dliriotech.tms.fleetservice.service.EquipoService;
-import com.dliriotech.tms.fleetservice.service.EstadoEquipoService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -27,9 +25,7 @@ import reactor.core.scheduler.Schedulers;
 public class EquipoServiceImpl implements EquipoService {
 
     private final EquipoRepository equipoRepository;
-    private final EstadoEquipoService estadoEquipoService;
-    private final TipoEquipoRepository tipoEquipoRepository;
-    private final EsquemaEquipoRepository esquemaEquipoRepository;
+    private final EquipoEntityCacheService equipoEntityCacheService;
 
     @Override
     public Flux<EquipoResponse> getAllEquiposByEmpresaId(Integer empresaId) {
@@ -106,33 +102,17 @@ public class EquipoServiceImpl implements EquipoService {
     }
 
     private Mono<EquipoResponse> enrichEquipoWithRelations(Equipo equipo) {
-        Mono<EstadoEquipoResponse> estadoMono = estadoEquipoService
-                .getAllEstadoEquipo()
-                .filter(estado -> estado.getId().equals(equipo.getEstadoId()))
-                .next()
-                .switchIfEmpty(Mono.error(new EquipoException(
-                        "FLEET-EQP-NF-001", "Estado de equipo no encontrado: " + equipo.getEstadoId())));
+        // Usar el servicio de cache para obtener las entidades relacionadas
+        Mono<EstadoEquipoResponse> estadoMono = equipoEntityCacheService
+                .getEstadoEquipo(equipo.getEstadoId());
 
-        Mono<TipoEquipoResponse> tipoMono = tipoEquipoRepository
-                .findById(equipo.getTipoEquipoId())
-                .switchIfEmpty(Mono.error(new EquipoException(
-                        "FLEET-EQP-NF-002", "Tipo de equipo no encontrado: " + equipo.getTipoEquipoId())))
-                .map(tipoEquipo -> TipoEquipoResponse.builder()
-                        .id(tipoEquipo.getId())
-                        .nombre(tipoEquipo.getNombre())
-                        .descripcion(tipoEquipo.getDescripcion())
-                        .build());
+        Mono<TipoEquipoResponse> tipoMono = equipoEntityCacheService
+                .getTipoEquipo(equipo.getTipoEquipoId());
 
-        Mono<EsquemaEquipoResponse> esquemaMono = esquemaEquipoRepository
-                .findById(equipo.getEsquemaEquipoId())
-                .switchIfEmpty(Mono.error(new EquipoException(
-                        "FLEET-EQP-NF-003", "Esquema de equipo no encontrado: " + equipo.getEsquemaEquipoId())))
-                .map(esquemaEquipo -> EsquemaEquipoResponse.builder()
-                        .id(esquemaEquipo.getId())
-                        .nombreEsquema(esquemaEquipo.getNombreEsquema())
-                        .totalPosiciones(esquemaEquipo.getTotalPosiciones())
-                        .build());
+        Mono<EsquemaEquipoResponse> esquemaMono = equipoEntityCacheService
+                .getEsquemaEquipo(equipo.getEsquemaEquipoId());
 
+        // Ejecutar las consultas en paralelo para optimizar el rendimiento
         return Mono.zip(
                 estadoMono.subscribeOn(Schedulers.boundedElastic()),
                 tipoMono.subscribeOn(Schedulers.boundedElastic()),
