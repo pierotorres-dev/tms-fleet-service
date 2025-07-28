@@ -1,6 +1,7 @@
 package com.dliriotech.tms.fleetservice.service.impl;
 
 import com.dliriotech.tms.fleetservice.dto.TipoEquipoResponse;
+import com.dliriotech.tms.fleetservice.entity.Equipo;
 import com.dliriotech.tms.fleetservice.entity.TipoEquipo;
 import com.dliriotech.tms.fleetservice.exception.EquipoException;
 import com.dliriotech.tms.fleetservice.repository.EquipoRepository;
@@ -23,9 +24,9 @@ public class TipoEquipoServiceImpl implements TipoEquipoService {
     @Override
     public Flux<TipoEquipoResponse> getTiposEquipoActivosByEmpresaId(Integer empresaId) {
         return equipoRepository.findByEmpresaId(empresaId)
-                .map(equipo -> equipo.getTipoEquipoId())
+                .map(Equipo::getTipoEquipoId)
                 .distinct()
-                .flatMap(tipoEquipoId -> tipoEquipoRepository.findById(tipoEquipoId))
+                .flatMap(tipoEquipoRepository::findById)
                 .map(this::mapEntityToResponse)
                 .subscribeOn(Schedulers.boundedElastic())
                 .doOnSubscribe(s -> log.debug("Iniciando consulta de tipos de equipo activos para empresa {}", empresaId))

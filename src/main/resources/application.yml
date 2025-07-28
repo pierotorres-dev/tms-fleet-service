@@ -7,7 +7,7 @@ spring:
     password: ${DB_PASS}
     pool:
       initial-size: 10
-      max-size: 30
+      max-size: 40
       max-idle-time: 10m
       max-create-connection-time: 2s
       validation-query: SELECT 1
