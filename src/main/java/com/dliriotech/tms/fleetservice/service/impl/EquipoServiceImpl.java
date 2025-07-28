@@ -85,7 +85,7 @@ public class EquipoServiceImpl implements EquipoService {
                 .doOnError(error -> log.error("Error al actualizar equipo {}: {}", id, error.getMessage()))
                 .onErrorResume(e -> e instanceof EquipoNotFoundException ? Mono.error(e)
                         : Mono.error(new EquipoException(
-                                "FLEET-EQP-OPE-003", "Error al actualizar equipo " + id)));
+                        "FLEET-EQP-OPE-003", "Error al actualizar equipo " + id)));
     }
 
     @Override
@@ -102,7 +102,7 @@ public class EquipoServiceImpl implements EquipoService {
                 .doOnError(error -> log.error("Error al actualizar estado del equipo {}: {}", id, error.getMessage()))
                 .onErrorResume(e -> e instanceof EquipoNotFoundException ? Mono.error(e)
                         : Mono.error(new EquipoException(
-                                "FLEET-EQP-OPE-004", "Error al actualizar estado del equipo " + id)));
+                        "FLEET-EQP-OPE-004", "Error al actualizar estado del equipo " + id)));
     }
 
     private Mono<EquipoResponse> enrichEquipoWithRelations(Equipo equipo) {
@@ -133,10 +133,13 @@ public class EquipoServiceImpl implements EquipoService {
                         .totalPosiciones(esquemaEquipo.getTotalPosiciones())
                         .build());
 
-        return Mono.zip(estadoMono, tipoMono, esquemaMono)
-                .flatMap(tuple -> Mono
-                        .fromCallable(() -> mapEntityToResponse(equipo, tuple.getT1(), tuple.getT2(), tuple.getT3()))
-                        .subscribeOn(Schedulers.boundedElastic()));
+        return Mono.zip(
+                estadoMono.subscribeOn(Schedulers.boundedElastic()),
+                tipoMono.subscribeOn(Schedulers.boundedElastic()),
+                esquemaMono.subscribeOn(Schedulers.boundedElastic())
+        ).flatMap(tuple -> Mono
+                .fromCallable(() -> mapEntityToResponse(equipo, tuple.getT1(), tuple.getT2(), tuple.getT3()))
+                .subscribeOn(Schedulers.boundedElastic()));
     }
 
     private Equipo mapRequestToEntity(EquipoRequest request) {
