@@ -15,7 +15,8 @@ public class EquipoResponse {
     private Integer id;
     private String placa;
     private String negocio;
-    private String equipo;
+    private TipoEquipoResponse tipoEquipoResponse;
+    private EsquemaEquipoResponse esquemaEquipoResponse;
     private LocalDate fechaInspeccion;
     private Integer kilometraje;
     private EstadoEquipoResponse estadoEquipoResponse;

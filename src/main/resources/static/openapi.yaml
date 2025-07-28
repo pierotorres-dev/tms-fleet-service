@@ -398,10 +398,10 @@ components:
           type: string
         fechaInspeccion:
           type: string
-          format: date-time
+          format: date
         kilometraje:
-          type: number
-          format: double
+          type: integer
+          format: int32
         estadoId:
           type: integer
           format: int32
@@ -427,10 +427,10 @@ components:
           type: string
         fechaInspeccion:
           type: string
-          format: date-time
+          format: date
         kilometraje:
-          type: number
-          format: double
+          type: integer
+          format: int32
         estadoEquipoResponse:
           $ref: '#/components/schemas/EstadoEquipoResponse'
         empresaId:
@@ -465,7 +465,8 @@ components:
         comentarioResolucion:
           type: string
         usuarioResolucion:
-          type: string
+          type: integer
+          format: int32
         usuarioId:
           type: integer
           format: int32
@@ -498,7 +499,8 @@ components:
         comentarioResolucion:
           type: string
         usuarioResolucion:
-          type: string
+          type: integer
+          format: int32
         usuarioId:
           type: integer
           format: int32
