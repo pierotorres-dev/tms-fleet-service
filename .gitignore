@@ -3,6 +3,7 @@
 application-local.properties
 application-test.properties
 docker-compose.yml
+*.md
 
 HELP.md
 target/

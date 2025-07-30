@@ -15,6 +15,8 @@ tags:
     description: Operaciones con equipos
   - name: Observaciones
     description: Operaciones con observaciones de equipos
+  - name: Tipos de Equipos
+    description: Operaciones con tipos de equipos y esquemas
 paths:
   /api/v1/catalogos/tipo-observacion-neumatico:
     get:
@@ -341,6 +343,58 @@ paths:
         '500':
           $ref: '#/components/responses/ErrorResponse'
 
+  /api/v1/empresas/{empresaId}/tipos-equipos-activos:
+    get:
+      tags:
+        - Tipos de Equipos
+      summary: Obtiene todos los tipos de equipos activos por empresa
+      operationId: getTiposEquipoActivosByEmpresaId
+      parameters:
+        - name: empresaId
+          in: path
+          description: ID de la empresa
+          required: true
+          schema:
+            type: integer
+            format: int32
+      responses:
+        '200':
+          description: Lista de tipos de equipos activos
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TipoEquipoResponse'
+        '500':
+          $ref: '#/components/responses/ErrorResponse'
+
+  /api/v1/tipos-equipos/{tipoEquipoId}/esquemas:
+    get:
+      tags:
+        - Tipos de Equipos
+      summary: Obtiene todos los esquemas por tipo de equipo
+      operationId: getEsquemasByTipoEquipoId
+      parameters:
+        - name: tipoEquipoId
+          in: path
+          description: ID del tipo de equipo
+          required: true
+          schema:
+            type: integer
+            format: int32
+      responses:
+        '200':
+          description: Lista de esquemas de equipo
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/EsquemaEquipoResponse'
+        '500':
+          $ref: '#/components/responses/ErrorResponse'
+
 components:
   schemas:
     TipoObservacionNeumaticoResponse:
@@ -394,8 +448,12 @@ components:
           type: string
         negocio:
           type: string
-        equipo:
-          type: string
+        tipoEquipoId:
+          type: integer
+          format: int32
+        esquemaEquipoId:
+          type: integer
+          format: int32
         fechaInspeccion:
           type: string
           format: date
@@ -423,8 +481,10 @@ components:
           type: string
         negocio:
           type: string
-        equipo:
-          type: string
+        tipoEquipoResponse:
+          $ref: '#/components/schemas/TipoEquipoResponse'
+        esquemaEquipoResponse:
+          $ref: '#/components/schemas/EsquemaEquipoResponse'
         fechaInspeccion:
           type: string
           format: date
@@ -528,6 +588,36 @@ components:
         - message
         - timestamp
         - path
+
+    TipoEquipoResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int32
+        nombre:
+          type: string
+        descripcion:
+          type: string
+      required:
+        - id
+        - nombre
+
+    EsquemaEquipoResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int32
+        nombreEsquema:
+          type: string
+        totalPosiciones:
+          type: integer
+          format: int32
+      required:
+        - id
+        - nombreEsquema
+        - totalPosiciones
 
   responses:
     ErrorResponse:
