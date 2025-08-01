@@ -2,6 +2,7 @@ package com.dliriotech.tms.fleetservice.controller;
 
 import com.dliriotech.tms.fleetservice.dto.EquipoNuevoRequest;
 import com.dliriotech.tms.fleetservice.dto.EquipoResponse;
+import com.dliriotech.tms.fleetservice.dto.EquipoUpdateKilometrajeRequest;
 import com.dliriotech.tms.fleetservice.dto.EquipoUpdateRequest;
 import com.dliriotech.tms.fleetservice.service.EquipoService;
 import lombok.RequiredArgsConstructor;
@@ -41,5 +42,12 @@ public class EquipoController {
             @PathVariable Integer id,
             @Valid @RequestBody EquipoUpdateRequest request) {
         return equipoService.updateEquipo(id, request);
+    }
+
+    @PatchMapping(value = "/{id}/kilometraje", produces = MediaType.APPLICATION_JSON_VALUE)
+    public Mono<EquipoResponse> updateEquipoKilometraje(
+            @PathVariable Integer id,
+            @Valid @RequestBody EquipoUpdateKilometrajeRequest request) {
+        return equipoService.updateEquipoKilometraje(id, request);
     }
 }

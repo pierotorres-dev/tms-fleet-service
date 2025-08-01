@@ -10,7 +10,6 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @Builder
 public class EquipoUpdateKilometrajeRequest {
-    private Integer KilometrajeAnterior;
     private Integer kilometrajeNuevo;
     private Integer usuarioId;
 }

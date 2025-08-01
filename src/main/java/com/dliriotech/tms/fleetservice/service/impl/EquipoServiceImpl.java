@@ -2,10 +2,12 @@ package com.dliriotech.tms.fleetservice.service.impl;
 
 import com.dliriotech.tms.fleetservice.dto.*;
 import com.dliriotech.tms.fleetservice.entity.Equipo;
+import com.dliriotech.tms.fleetservice.entity.HistorialEquipoKilometraje;
 import com.dliriotech.tms.fleetservice.exception.DuplicatePlacaException;
 import com.dliriotech.tms.fleetservice.exception.EquipoException;
 import com.dliriotech.tms.fleetservice.exception.EquipoNotFoundException;
 import com.dliriotech.tms.fleetservice.repository.EquipoRepository;
+import com.dliriotech.tms.fleetservice.repository.HistorialEquipoKilometrajeRepository;
 import com.dliriotech.tms.fleetservice.service.EquipoEntityCacheService;
 import com.dliriotech.tms.fleetservice.service.EquipoService;
 import lombok.RequiredArgsConstructor;
@@ -15,6 +17,10 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -22,6 +28,7 @@ public class EquipoServiceImpl implements EquipoService {
 
     private final EquipoRepository equipoRepository;
     private final EquipoEntityCacheService equipoEntityCacheService;
+    private final HistorialEquipoKilometrajeRepository historialEquipoKilometrajeRepository;
 
     @Override
     public Flux<EquipoResponse> getAllEquiposByEmpresaId(Integer empresaId) {
@@ -80,6 +87,37 @@ public class EquipoServiceImpl implements EquipoService {
                         "FLEET-EQP-OPE-003", "Error al actualizar equipo " + id)));
     }
 
+    @Override
+    public Mono<EquipoResponse> updateEquipoKilometraje(Integer id, EquipoUpdateKilometrajeRequest request) {
+        return equipoRepository.findById(id)
+                .switchIfEmpty(Mono.error(new EquipoNotFoundException(id.toString())))
+                .flatMap(equipo -> {
+                    // Create history record
+                    HistorialEquipoKilometraje historial = HistorialEquipoKilometraje.builder()
+                            .equipoId(id)
+                            .kilometrajeAnterior(equipo.getKilometraje())
+                            .kilometrajeNuevo(request.getKilometrajeNuevo())
+                            .fechaActualizacion(LocalDateTime.now(ZoneId.of("America/Lima"))) // Timestamp for history record
+                            .usuarioId(request.getUsuarioId())
+                            .build();
+
+                    // Update equipo
+                    equipo.setKilometraje(request.getKilometrajeNuevo());
+                    equipo.setFechaActualizacionKilometraje(LocalDate.now(ZoneId.of("America/Lima"))); // Current date for equipment
+
+                    // Save history record first, then update equipment
+                    return historialEquipoKilometrajeRepository.save(historial)
+                            .then(equipoRepository.save(equipo));
+                })
+                .flatMap(this::enrichEquipoWithRelations)
+                .doOnSubscribe(s -> log.debug("Iniciando actualización de kilometraje para equipo {}", id))
+                .doOnSuccess(result -> log.debug("Kilometraje del equipo {} actualizado exitosamente", id))
+                .doOnError(error -> log.error("Error al actualizar kilometraje del equipo {}: {}", id, error.getMessage()))
+                .onErrorResume(e -> e instanceof EquipoNotFoundException ? Mono.error(e)
+                        : Mono.error(new EquipoException(
+                        "FLEET-EQP-OPE-004", "Error al actualizar kilometraje del equipo " + id)));
+    }
+
     private Mono<EquipoResponse> enrichEquipoWithRelations(Equipo equipo) {
         // Usar el servicio de cache para obtener las entidades relacionadas
         Mono<EstadoEquipoResponse> estadoMono = equipoEntityCacheService
@@ -125,6 +163,7 @@ public class EquipoServiceImpl implements EquipoService {
                 .esquemaEquipoResponse(esquemaEquipo)
                 .fechaInspeccion(entity.getFechaInspeccion())
                 .kilometraje(entity.getKilometraje())
+                .fechaActualizacionKilometraje(entity.getFechaActualizacionKilometraje())
                 .estadoEquipoResponse(estado)
                 .empresaId(entity.getEmpresaId())
                 .build();
