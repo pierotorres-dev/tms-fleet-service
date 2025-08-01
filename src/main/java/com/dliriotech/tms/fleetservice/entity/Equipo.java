@@ -33,6 +33,9 @@ public class Equipo {
 
     private Integer kilometraje;
 
+    @Column("fecha_actualizacion_kilometraje")
+    private LocalDate fechaActualizacionKilometraje;
+
     @Column("id_estado_equipo")
     private Integer estadoId;
 

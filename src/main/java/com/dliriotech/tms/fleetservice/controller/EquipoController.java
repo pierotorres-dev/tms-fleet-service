@@ -1,7 +1,8 @@
 package com.dliriotech.tms.fleetservice.controller;
 
-import com.dliriotech.tms.fleetservice.dto.EquipoRequest;
+import com.dliriotech.tms.fleetservice.dto.EquipoNuevoRequest;
 import com.dliriotech.tms.fleetservice.dto.EquipoResponse;
+import com.dliriotech.tms.fleetservice.dto.EquipoUpdateRequest;
 import com.dliriotech.tms.fleetservice.service.EquipoService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -31,21 +32,14 @@ public class EquipoController {
 
     @PostMapping(produces = MediaType.APPLICATION_JSON_VALUE)
     @ResponseStatus(HttpStatus.CREATED)
-    public Mono<EquipoResponse> saveEquipo(@Valid @RequestBody EquipoRequest request) {
+    public Mono<EquipoResponse> saveEquipo(@Valid @RequestBody EquipoNuevoRequest request) {
         return equipoService.saveEquipo(request);
     }
 
-    @PutMapping(value = "/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
+    @PatchMapping(value = "/{id}/configuracion", produces = MediaType.APPLICATION_JSON_VALUE)
     public Mono<EquipoResponse> updateEquipo(
             @PathVariable Integer id,
-            @Valid @RequestBody EquipoRequest request) {
+            @Valid @RequestBody EquipoUpdateRequest request) {
         return equipoService.updateEquipo(id, request);
-    }
-
-    @PatchMapping(value = "/{id}/estado/{estadoId}")
-    public Mono<EquipoResponse> updateEstadoEquipo(
-            @PathVariable Integer id,
-            @PathVariable Integer estadoId) {
-        return equipoService.updateEstadoEquipo(id, estadoId);
     }
 }

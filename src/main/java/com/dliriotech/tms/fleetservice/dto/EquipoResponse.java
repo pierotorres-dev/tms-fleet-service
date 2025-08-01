@@ -19,6 +19,7 @@ public class EquipoResponse {
     private EsquemaEquipoResponse esquemaEquipoResponse;
     private LocalDate fechaInspeccion;
     private Integer kilometraje;
+    private LocalDate fechaActualizacionKilometraje;
     private EstadoEquipoResponse estadoEquipoResponse;
     private Integer empresaId;
 }
