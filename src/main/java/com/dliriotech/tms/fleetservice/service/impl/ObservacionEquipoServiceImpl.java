@@ -19,6 +19,7 @@ import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 
 @Service
 @RequiredArgsConstructor
@@ -43,7 +44,7 @@ public class ObservacionEquipoServiceImpl implements ObservacionEquipoService {
     @Override
     public Mono<ObservacionEquipoResponse> saveObservacion(ObservacionEquipoRequest request) {
         ObservacionEquipo entity = mapRequestToEntity(request);
-        entity.setFecha(entity.getFecha() != null ? entity.getFecha() : LocalDateTime.now());
+        entity.setFecha(entity.getFecha() != null ? entity.getFecha() : LocalDateTime.now(ZoneId.of("America/Lima")));
 
         return observacionEquipoRepository.save(entity)
                 .flatMap(this::enrichObservacionWithRelations)

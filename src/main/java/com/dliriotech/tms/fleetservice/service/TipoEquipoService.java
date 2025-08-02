@@ -4,5 +4,6 @@ import com.dliriotech.tms.fleetservice.dto.TipoEquipoResponse;
 import reactor.core.publisher.Flux;
 
 public interface TipoEquipoService {
+    Flux<TipoEquipoResponse> getAllTiposEquipo();
     Flux<TipoEquipoResponse> getTiposEquipoActivosByEmpresaId(Integer empresaId);
 }

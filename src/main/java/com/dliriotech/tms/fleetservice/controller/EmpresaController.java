@@ -17,6 +17,11 @@ public class EmpresaController {
 
     private final TipoEquipoService tipoEquipoService;
 
+    @GetMapping(value = "/tipos-equipos-total", produces = MediaType.APPLICATION_JSON_VALUE)
+    public Flux<TipoEquipoResponse> getAllTiposEquipo() {
+        return tipoEquipoService.getAllTiposEquipo();
+    }
+
     @GetMapping(value = "/{empresaId}/tipos-equipos-activos", produces = MediaType.APPLICATION_JSON_VALUE)
     public Flux<TipoEquipoResponse> getTiposEquipoActivosByEmpresaId(@PathVariable Integer empresaId) {
         return tipoEquipoService.getTiposEquipoActivosByEmpresaId(empresaId);

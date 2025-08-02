@@ -15,6 +15,8 @@ tags:
     description: Operaciones con equipos
   - name: Observaciones
     description: Operaciones con observaciones de equipos
+  - name: Tipos de Equipos
+    description: Operaciones con tipos de equipos y esquemas
 paths:
   /api/v1/catalogos/tipo-observacion-neumatico:
     get:
@@ -121,10 +123,12 @@ paths:
           $ref: '#/components/responses/NotFoundResponse'
         '500':
           $ref: '#/components/responses/ErrorResponse'
-    put:
+
+  /api/v1/equipos/{id}/configuracion:
+    patch:
       tags:
         - Equipos
-      summary: Actualiza un equipo existente
+      summary: Actualiza la configuración de un equipo existente
       operationId: updateEquipo
       parameters:
         - name: id
@@ -135,15 +139,48 @@ paths:
             type: integer
             format: int32
       requestBody:
-        description: Datos del equipo a actualizar
+        description: Datos de configuración del equipo a actualizar
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/EquipoRequest'
+              $ref: '#/components/schemas/EquipoUpdateRequest'
       responses:
         '200':
           description: Equipo actualizado correctamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EquipoResponse'
+        '404':
+          $ref: '#/components/responses/NotFoundResponse'
+        '500':
+          $ref: '#/components/responses/ErrorResponse'
+
+  /api/v1/equipos/{id}/kilometraje:
+    patch:
+      tags:
+        - Equipos
+      summary: Actualiza el kilometraje de un equipo
+      operationId: updateEquipoKilometraje
+      parameters:
+        - name: id
+          in: path
+          description: ID del equipo
+          required: true
+          schema:
+            type: integer
+            format: int32
+      requestBody:
+        description: Datos del nuevo kilometraje
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EquipoUpdateKilometrajeRequest'
+      responses:
+        '200':
+          description: Kilometraje del equipo actualizado correctamente
           content:
             application/json:
               schema:
@@ -165,7 +202,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/EquipoRequest'
+              $ref: '#/components/schemas/EquipoNuevoRequest'
       responses:
         '201':
           description: Equipo creado correctamente
@@ -185,39 +222,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-        '500':
-          $ref: '#/components/responses/ErrorResponse'
-
-  /api/v1/equipos/{id}/estado/{estadoId}:
-    patch:
-      tags:
-        - Equipos
-      summary: Actualiza el estado de un equipo
-      operationId: updateEstadoEquipo
-      parameters:
-        - name: id
-          in: path
-          description: ID del equipo
-          required: true
-          schema:
-            type: integer
-            format: int32
-        - name: estadoId
-          in: path
-          description: ID del nuevo estado
-          required: true
-          schema:
-            type: integer
-            format: int32
-      responses:
-        '200':
-          description: Estado del equipo actualizado correctamente
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/EquipoResponse'
-        '404':
-          $ref: '#/components/responses/NotFoundResponse'
         '500':
           $ref: '#/components/responses/ErrorResponse'
 
@@ -341,6 +345,76 @@ paths:
         '500':
           $ref: '#/components/responses/ErrorResponse'
 
+  /api/v1/empresas/tipos-equipos-total:
+    get:
+      tags:
+        - Tipos de Equipos
+      summary: Obtiene todos los tipos de equipos
+      operationId: getAllTiposEquipo
+      responses:
+        '200':
+          description: Lista de todos los tipos de equipos
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TipoEquipoResponse'
+        '500':
+          $ref: '#/components/responses/ErrorResponse'
+
+  /api/v1/empresas/{empresaId}/tipos-equipos-activos:
+    get:
+      tags:
+        - Tipos de Equipos
+      summary: Obtiene todos los tipos de equipos activos por empresa
+      operationId: getTiposEquipoActivosByEmpresaId
+      parameters:
+        - name: empresaId
+          in: path
+          description: ID de la empresa
+          required: true
+          schema:
+            type: integer
+            format: int32
+      responses:
+        '200':
+          description: Lista de tipos de equipos activos
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TipoEquipoResponse'
+        '500':
+          $ref: '#/components/responses/ErrorResponse'
+
+  /api/v1/tipos-equipos/{tipoEquipoId}/esquemas:
+    get:
+      tags:
+        - Tipos de Equipos
+      summary: Obtiene todos los esquemas por tipo de equipo
+      operationId: getEsquemasByTipoEquipoId
+      parameters:
+        - name: tipoEquipoId
+          in: path
+          description: ID del tipo de equipo
+          required: true
+          schema:
+            type: integer
+            format: int32
+      responses:
+        '200':
+          description: Lista de esquemas de equipo
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/EsquemaEquipoResponse'
+        '500':
+          $ref: '#/components/responses/ErrorResponse'
+
 components:
   schemas:
     TipoObservacionNeumaticoResponse:
@@ -387,19 +461,17 @@ components:
         - id
         - nombre
 
-    EquipoRequest:
+    EquipoNuevoRequest:
       type: object
       properties:
         placa:
           type: string
         negocio:
           type: string
-        equipo:
-          type: string
-        fechaInspeccion:
-          type: string
-          format: date
-        kilometraje:
+        tipoEquipoId:
+          type: integer
+          format: int32
+        esquemaEquipoId:
           type: integer
           format: int32
         estadoId:
@@ -413,6 +485,36 @@ components:
         - estadoId
         - empresaId
 
+    EquipoUpdateRequest:
+      type: object
+      properties:
+        placa:
+          type: string
+        negocio:
+          type: string
+        tipoEquipoId:
+          type: integer
+          format: int32
+        esquemaEquipoId:
+          type: integer
+          format: int32
+        estadoId:
+          type: integer
+          format: int32
+
+    EquipoUpdateKilometrajeRequest:
+      type: object
+      properties:
+        kilometrajeNuevo:
+          type: integer
+          format: int32
+        usuarioId:
+          type: integer
+          format: int32
+      required:
+        - kilometrajeNuevo
+        - usuarioId
+
     EquipoResponse:
       type: object
       properties:
@@ -423,14 +525,19 @@ components:
           type: string
         negocio:
           type: string
-        equipo:
-          type: string
+        tipoEquipoResponse:
+          $ref: '#/components/schemas/TipoEquipoResponse'
+        esquemaEquipoResponse:
+          $ref: '#/components/schemas/EsquemaEquipoResponse'
         fechaInspeccion:
           type: string
           format: date
         kilometraje:
           type: integer
           format: int32
+        fechaActualizacionKilometraje:
+          type: string
+          format: date
         estadoEquipoResponse:
           $ref: '#/components/schemas/EstadoEquipoResponse'
         empresaId:
@@ -528,6 +635,36 @@ components:
         - message
         - timestamp
         - path
+
+    TipoEquipoResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int32
+        nombre:
+          type: string
+        descripcion:
+          type: string
+      required:
+        - id
+        - nombre
+
+    EsquemaEquipoResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int32
+        nombreEsquema:
+          type: string
+        totalPosiciones:
+          type: integer
+          format: int32
+      required:
+        - id
+        - nombreEsquema
+        - totalPosiciones
 
   responses:
     ErrorResponse:
