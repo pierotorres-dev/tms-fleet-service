@@ -82,9 +82,16 @@ public class EquipoServiceImpl implements EquipoService {
                 .doOnSubscribe(s -> log.debug("Iniciando actualización de equipo {}", id))
                 .doOnSuccess(result -> log.debug("Equipo {} actualizado exitosamente", id))
                 .doOnError(error -> log.error("Error al actualizar equipo {}: {}", id, error.getMessage()))
-                .onErrorResume(e -> e instanceof EquipoNotFoundException ? Mono.error(e)
-                        : Mono.error(new EquipoException(
-                        "FLEET-EQP-OPE-003", "Error al actualizar equipo " + id)));
+                .onErrorResume(e -> {
+                    if (e instanceof org.springframework.dao.DuplicateKeyException) {
+                        // Extract placa from the request or existing entity
+                        String placa = request.getPlaca();
+                        return Mono.error(new DuplicatePlacaException(placa));
+                    }
+                    return e instanceof EquipoNotFoundException ? Mono.error(e)
+                            : Mono.error(new EquipoException(
+                            "FLEET-EQP-OPE-003", "Error al actualizar equipo " + id));
+                });
     }
 
     @Override

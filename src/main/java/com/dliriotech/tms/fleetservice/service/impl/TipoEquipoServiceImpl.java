@@ -22,6 +22,18 @@ public class TipoEquipoServiceImpl implements TipoEquipoService {
     private final TipoEquipoRepository tipoEquipoRepository;
 
     @Override
+    public Flux<TipoEquipoResponse> getAllTiposEquipo() {
+        return tipoEquipoRepository.findAll()
+                .map(this::mapEntityToResponse)
+                .subscribeOn(Schedulers.boundedElastic())
+                .doOnSubscribe(s -> log.debug("Iniciando consulta de todos los tipos de equipo"))
+                .doOnComplete(() -> log.debug("Consulta de todos los tipos de equipo completada"))
+                .doOnError(error -> log.error("Error al obtener tipos de equipo: {}", error.getMessage()))
+                .onErrorResume(e -> Flux.error(new EquipoException(
+                        "FLEET-TEQ-OPE-002", "Error al obtener tipos de equipo")));
+    }
+
+    @Override
     public Flux<TipoEquipoResponse> getTiposEquipoActivosByEmpresaId(Integer empresaId) {
         return equipoRepository.findByEmpresaId(empresaId)
                 .map(Equipo::getTipoEquipoId)
