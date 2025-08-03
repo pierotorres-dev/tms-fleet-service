@@ -3,7 +3,7 @@ package com.dliriotech.tms.fleetservice.service.impl;
 import com.dliriotech.tms.fleetservice.dto.EstadoObservacionResponse;
 import com.dliriotech.tms.fleetservice.dto.ObservacionEquipoRequest;
 import com.dliriotech.tms.fleetservice.dto.ObservacionEquipoResponse;
-import com.dliriotech.tms.fleetservice.dto.TipoObservacionNeumaticoResponse;
+import com.dliriotech.tms.fleetservice.dto.TipoObservacionResponse;
 import com.dliriotech.tms.fleetservice.entity.ObservacionEquipo;
 import com.dliriotech.tms.fleetservice.exception.ObservacionEquipoException;
 import com.dliriotech.tms.fleetservice.exception.ResourceNotFoundException;
@@ -83,7 +83,7 @@ public class ObservacionEquipoServiceImpl implements ObservacionEquipoService {
     }
 
     private Mono<ObservacionEquipoResponse> enrichObservacionWithRelations(ObservacionEquipo observacion) {
-        Mono<TipoObservacionNeumaticoResponse> tipoMono = tipoObservacionNeumaticoService
+        Mono<TipoObservacionResponse> tipoMono = tipoObservacionNeumaticoService
                 .getAllTipoObservacionNeumatico()
                 .filter(tipo -> tipo.getId().equals(observacion.getTipoObservacionId()))
                 .next()
@@ -119,14 +119,14 @@ public class ObservacionEquipoServiceImpl implements ObservacionEquipoService {
 
     private ObservacionEquipoResponse mapEntityToResponse(
             ObservacionEquipo entity,
-            TipoObservacionNeumaticoResponse tipo,
+            TipoObservacionResponse tipo,
             EstadoObservacionResponse estado) {
 
         return ObservacionEquipoResponse.builder()
                 .id(entity.getId())
                 .equipoId(entity.getEquipoId())
                 .fecha(entity.getFecha())
-                .tipoObservacionNeumaticoResponse(tipo)
+                .tipoObservacionResponse(tipo)
                 .descripcion(entity.getDescripcion())
                 .estadoObservacionResponse(estado)
                 .fechaResolucion(entity.getFechaResolucion())

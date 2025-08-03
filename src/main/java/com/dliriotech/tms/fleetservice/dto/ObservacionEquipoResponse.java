@@ -15,7 +15,7 @@ public class ObservacionEquipoResponse {
     private Integer id;
     private Integer equipoId;
     private LocalDateTime fecha;
-    private TipoObservacionNeumaticoResponse tipoObservacionNeumaticoResponse;
+    private TipoObservacionResponse tipoObservacionResponse;
     private String descripcion;
     private EstadoObservacionResponse estadoObservacionResponse;
     private LocalDateTime fechaResolucion;

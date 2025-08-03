@@ -2,7 +2,7 @@ package com.dliriotech.tms.fleetservice.controller;
 
 import com.dliriotech.tms.fleetservice.dto.EstadoEquipoResponse;
 import com.dliriotech.tms.fleetservice.dto.EstadoObservacionResponse;
-import com.dliriotech.tms.fleetservice.dto.TipoObservacionNeumaticoResponse;
+import com.dliriotech.tms.fleetservice.dto.TipoObservacionResponse;
 import com.dliriotech.tms.fleetservice.service.EstadoEquipoService;
 import com.dliriotech.tms.fleetservice.service.EstadoObservacionService;
 import com.dliriotech.tms.fleetservice.service.TipoObservacionNeumaticoService;
@@ -23,8 +23,13 @@ public class CatalogoController {
     private final EstadoEquipoService estadoEquipoService;
 
     @GetMapping(value = "/tipo-observacion-neumatico", produces = MediaType.APPLICATION_JSON_VALUE)
-    public Flux<TipoObservacionNeumaticoResponse> getAllTipoObservacionNeumatico() {
+    public Flux<TipoObservacionResponse> getAllTipoObservacionNeumatico() {
         return tipoObservacionNeumaticoService.getAllTipoObservacionNeumatico();
+    }
+
+    @GetMapping(value = "/tipo-observacion-equipo", produces = MediaType.APPLICATION_JSON_VALUE)
+    public Flux<TipoObservacionResponse> getAllTipoObservacionEquipo() {
+        return tipoObservacionNeumaticoService.getAllTipoObservacionEquipo();
     }
 
     @GetMapping(value = "/estado-observacion", produces = MediaType.APPLICATION_JSON_VALUE)

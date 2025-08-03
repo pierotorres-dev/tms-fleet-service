@@ -1,7 +1,9 @@
 package com.dliriotech.tms.fleetservice.repository;
 
-import com.dliriotech.tms.fleetservice.entity.TipoObservacionNeumatico;
+import com.dliriotech.tms.fleetservice.entity.TipoObservacion;
 import org.springframework.data.repository.reactive.ReactiveCrudRepository;
+import reactor.core.publisher.Flux;
 
-public interface TipoObservacionNeumaticoRepository extends ReactiveCrudRepository<TipoObservacionNeumatico, Integer> {
+public interface TipoObservacionNeumaticoRepository extends ReactiveCrudRepository<TipoObservacion, Integer> {
+    Flux<TipoObservacion> findAllByAmbito(String ambito);
 }

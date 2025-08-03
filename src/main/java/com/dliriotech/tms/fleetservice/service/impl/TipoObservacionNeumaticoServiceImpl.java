@@ -1,7 +1,7 @@
 package com.dliriotech.tms.fleetservice.service.impl;
 
-import com.dliriotech.tms.fleetservice.dto.TipoObservacionNeumaticoResponse;
-import com.dliriotech.tms.fleetservice.entity.TipoObservacionNeumatico;
+import com.dliriotech.tms.fleetservice.dto.TipoObservacionResponse;
+import com.dliriotech.tms.fleetservice.entity.TipoObservacion;
 import com.dliriotech.tms.fleetservice.exception.CatalogOperationException;
 import com.dliriotech.tms.fleetservice.infrastructure.cache.ReactiveRedisCacheService;
 import com.dliriotech.tms.fleetservice.repository.TipoObservacionNeumaticoRepository;
@@ -24,26 +24,41 @@ public class TipoObservacionNeumaticoServiceImpl implements TipoObservacionNeuma
     private final ReactiveRedisCacheService cacheService;
 
     @Value("${app.cache.prefixes.tipo-observacion-neumatico}")
-    private String cacheKey;
+    private String cacheKeyPrefix;
 
     @Override
-    public Flux<TipoObservacionNeumaticoResponse> getAllTipoObservacionNeumatico() {
-        TypeReference<List<TipoObservacionNeumaticoResponse>> typeRef =
-                new TypeReference<>() {};
+    public Flux<TipoObservacionResponse> getAllTipoObservacionNeumatico() {
+        TypeReference<List<TipoObservacionResponse>> typeRef = new TypeReference<>() {};
+        String cacheKey = cacheKeyPrefix + ":NEUMATICO";
 
         return cacheService.getCachedCollection(
                         cacheKey,
-                        tipoObservacionNeumaticoRepository.findAll().map(this::mapToDto),
+                        tipoObservacionNeumaticoRepository.findAllByAmbito("NEUMATICO").map(this::mapToDto),
                         typeRef
                 )
                 .doOnError(error -> log.error("Error al obtener tipos de observación neumático", error))
                 .onErrorResume(e -> Flux.error(new CatalogOperationException("tipos de observacion de neumático")));
     }
 
-    private TipoObservacionNeumaticoResponse mapToDto(TipoObservacionNeumatico entity) {
-        return TipoObservacionNeumaticoResponse.builder()
+    @Override
+    public Flux<TipoObservacionResponse> getAllTipoObservacionEquipo() {
+        TypeReference<List<TipoObservacionResponse>> typeRef = new TypeReference<>() {};
+        String cacheKey = cacheKeyPrefix + ":EQUIPO";
+
+        return cacheService.getCachedCollection(
+                        cacheKey,
+                        tipoObservacionNeumaticoRepository.findAllByAmbito("EQUIPO").map(this::mapToDto),
+                        typeRef
+                )
+                .doOnError(error -> log.error("Error al obtener tipos de observación equipo", error))
+                .onErrorResume(e -> Flux.error(new CatalogOperationException("tipos de observacion de equipo")));
+    }
+
+    private TipoObservacionResponse mapToDto(TipoObservacion entity) {
+        return TipoObservacionResponse.builder()
                 .id(entity.getId())
                 .nombre(entity.getNombre())
+                .ambito(entity.getAmbito())
                 .descripcion(entity.getDescripcion())
                 .activo(entity.getActivo())
                 .build();

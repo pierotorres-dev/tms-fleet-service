@@ -1,21 +1,18 @@
-package com.dliriotech.tms.fleetservice.entity;
+package com.dliriotech.tms.fleetservice.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.springframework.data.annotation.Id;
-import org.springframework.data.relational.core.mapping.Table;
 
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@Table("tipos_observaciones_neumaticos")
-public class TipoObservacionNeumatico {
-    @Id
+public class TipoObservacionResponse {
     private Integer id;
     private String nombre;
+    private String ambito;
     private String descripcion;
     private Integer activo;
 }
