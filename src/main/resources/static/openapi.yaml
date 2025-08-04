@@ -32,7 +32,25 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/TipoObservacionNeumaticoResponse'
+                  $ref: '#/components/schemas/TipoObservacionResponse'
+        '500':
+          $ref: '#/components/responses/ErrorResponse'
+
+  /api/v1/catalogos/tipo-observacion-equipo:
+    get:
+      tags:
+        - Catálogos
+      summary: Obtiene todos los tipos de observación de equipos
+      operationId: getAllTipoObservacionEquipo
+      responses:
+        '200':
+          description: Lista de tipos de observación de equipos
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TipoObservacionResponse'
         '500':
           $ref: '#/components/responses/ErrorResponse'
 
@@ -417,13 +435,15 @@ paths:
 
 components:
   schemas:
-    TipoObservacionNeumaticoResponse:
+    TipoObservacionResponse:
       type: object
       properties:
         id:
           type: integer
           format: int32
         nombre:
+          type: string
+        ambito:
           type: string
         descripcion:
           type: string
@@ -594,8 +614,8 @@ components:
         fecha:
           type: string
           format: date-time
-        tipoObservacionNeumaticoResponse:
-          $ref: '#/components/schemas/TipoObservacionNeumaticoResponse'
+        TipoObservacionResponse:
+          $ref: '#/components/schemas/TipoObservacionResponse'
         descripcion:
           type: string
         estadoObservacionResponse:
@@ -615,7 +635,7 @@ components:
         - id
         - equipoId
         - fecha
-        - tipoObservacionNeumaticoResponse
+        - TipoObservacionResponse
         - estadoObservacionResponse
 
     ErrorResponse:
