@@ -116,6 +116,32 @@ paths:
         '500':
           $ref: '#/components/responses/ErrorResponse'
 
+  /api/v1/equipos/empresa/{empresaId}/con-observaciones:
+    get:
+      tags:
+        - Equipos
+      summary: Obtiene todos los equipos por empresa con el conteo de observaciones pendientes
+      operationId: getAllEquiposConObservacionesByEmpresaId
+      parameters:
+        - name: empresaId
+          in: path
+          description: ID de la empresa
+          required: true
+          schema:
+            type: integer
+            format: int32
+      responses:
+        '200':
+          description: Lista de equipos con conteo de observaciones pendientes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/EquipoConObservacionesResponse'
+        '500':
+          $ref: '#/components/responses/ErrorResponse'
+
   /api/v1/equipos/{id}:
     get:
       tags:
@@ -568,6 +594,45 @@ components:
         - placa
         - estadoEquipoResponse
         - empresaId
+
+    EquipoConObservacionesResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int32
+        placa:
+          type: string
+        negocio:
+          type: string
+        tipoEquipoResponse:
+          $ref: '#/components/schemas/TipoEquipoResponse'
+        esquemaEquipoResponse:
+          $ref: '#/components/schemas/EsquemaEquipoResponse'
+        fechaInspeccion:
+          type: string
+          format: date
+        kilometraje:
+          type: integer
+          format: int32
+        fechaActualizacionKilometraje:
+          type: string
+          format: date
+        estadoEquipoResponse:
+          $ref: '#/components/schemas/EstadoEquipoResponse'
+        empresaId:
+          type: integer
+          format: int32
+        totalObservacionesPendientes:
+          type: integer
+          format: int64
+          description: Total de observaciones pendientes para este equipo (incluye observaciones de equipo y neumáticos)
+      required:
+        - id
+        - placa
+        - estadoEquipoResponse
+        - empresaId
+        - totalObservacionesPendientes
 
     ObservacionEquipoRequest:
       type: object

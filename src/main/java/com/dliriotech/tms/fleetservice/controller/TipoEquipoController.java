@@ -1,7 +1,6 @@
 package com.dliriotech.tms.fleetservice.controller;
 
 import com.dliriotech.tms.fleetservice.dto.EsquemaEquipoResponse;
-import com.dliriotech.tms.fleetservice.dto.TipoEquipoResponse;
 import com.dliriotech.tms.fleetservice.service.EsquemaEquipoService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;

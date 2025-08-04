@@ -10,6 +10,7 @@ import com.dliriotech.tms.fleetservice.repository.EquipoRepository;
 import com.dliriotech.tms.fleetservice.repository.HistorialEquipoKilometrajeRepository;
 import com.dliriotech.tms.fleetservice.service.EquipoEntityCacheService;
 import com.dliriotech.tms.fleetservice.service.EquipoService;
+import com.dliriotech.tms.fleetservice.service.ObservacionCountService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -29,6 +30,7 @@ public class EquipoServiceImpl implements EquipoService {
     private final EquipoRepository equipoRepository;
     private final EquipoEntityCacheService equipoEntityCacheService;
     private final HistorialEquipoKilometrajeRepository historialEquipoKilometrajeRepository;
+    private final ObservacionCountService observacionCountService;
 
     @Override
     public Flux<EquipoResponse> getAllEquiposByEmpresaId(Integer empresaId) {
@@ -40,6 +42,18 @@ public class EquipoServiceImpl implements EquipoService {
                         empresaId, error.getMessage()))
                 .onErrorResume(e -> Flux.error(new EquipoException(
                         "FLEET-EQP-OPE-001", "Error al obtener equipos de la empresa " + empresaId)));
+    }
+
+    @Override
+    public Flux<EquipoConObservacionesResponse> getAllEquiposConObservacionesByEmpresaId(Integer empresaId) {
+        return equipoRepository.findByEmpresaId(empresaId)
+                .flatMap(this::enrichEquipoWithObservaciones)
+                .doOnSubscribe(s -> log.debug("Iniciando consulta de equipos con observaciones para empresa {}", empresaId))
+                .doOnComplete(() -> log.debug("Consulta de equipos con observaciones para empresa {} completada", empresaId))
+                .doOnError(error -> log.error("Error al obtener equipos con observaciones para empresa {}: {}",
+                        empresaId, error.getMessage()))
+                .onErrorResume(e -> Flux.error(new EquipoException(
+                        "FLEET-EQP-OPE-005", "Error al obtener equipos con observaciones de la empresa " + empresaId)));
     }
 
     @Override
@@ -146,6 +160,41 @@ public class EquipoServiceImpl implements EquipoService {
                 .subscribeOn(Schedulers.boundedElastic()));
     }
 
+    /**
+     * Enriquece un equipo con sus relaciones y el conteo de observaciones pendientes.
+     * Utiliza consultas paralelas para optimizar el rendimiento.
+     */
+    private Mono<EquipoConObservacionesResponse> enrichEquipoWithObservaciones(Equipo equipo) {
+        // Obtener las entidades relacionadas
+        Mono<EstadoEquipoResponse> estadoMono = equipoEntityCacheService
+                .getEstadoEquipo(equipo.getEstadoId())
+                .subscribeOn(Schedulers.boundedElastic());
+
+        Mono<TipoEquipoResponse> tipoMono = equipoEntityCacheService
+                .getTipoEquipo(equipo.getTipoEquipoId())
+                .subscribeOn(Schedulers.boundedElastic());
+
+        Mono<EsquemaEquipoResponse> esquemaMono = equipoEntityCacheService
+                .getEsquemaEquipo(equipo.getEsquemaEquipoId())
+                .subscribeOn(Schedulers.boundedElastic());
+
+        // Obtener el conteo de observaciones pendientes
+        Mono<Long> observacionesMono = observacionCountService
+                .contarObservacionesPendientesPorEquipo(equipo.getId())
+                .subscribeOn(Schedulers.boundedElastic());
+
+        // Ejecutar todas las consultas en paralelo para maximizar el rendimiento
+        return Mono.zip(estadoMono, tipoMono, esquemaMono, observacionesMono)
+                .flatMap(tuple -> Mono.fromCallable(() -> 
+                        mapEntityToResponseConObservaciones(
+                                equipo, 
+                                tuple.getT1(), 
+                                tuple.getT2(), 
+                                tuple.getT3(), 
+                                tuple.getT4()))
+                        .subscribeOn(Schedulers.boundedElastic()));
+    }
+
     private Equipo mapRequestToEntity(EquipoNuevoRequest request) {
         return Equipo.builder()
                 .placa(request.getPlaca())
@@ -173,6 +222,30 @@ public class EquipoServiceImpl implements EquipoService {
                 .fechaActualizacionKilometraje(entity.getFechaActualizacionKilometraje())
                 .estadoEquipoResponse(estado)
                 .empresaId(entity.getEmpresaId())
+                .build();
+    }
+
+    /**
+     * Mapea una entidad Equipo y sus relaciones al DTO con conteo de observaciones.
+     */
+    private EquipoConObservacionesResponse mapEntityToResponseConObservaciones(
+            Equipo entity,
+            EstadoEquipoResponse estado,
+            TipoEquipoResponse tipoEquipo,
+            EsquemaEquipoResponse esquemaEquipo,
+            Long totalObservacionesPendientes) {
+        return EquipoConObservacionesResponse.builder()
+                .id(entity.getId())
+                .placa(entity.getPlaca())
+                .negocio(entity.getNegocio())
+                .tipoEquipoResponse(tipoEquipo)
+                .esquemaEquipoResponse(esquemaEquipo)
+                .fechaInspeccion(entity.getFechaInspeccion())
+                .kilometraje(entity.getKilometraje())
+                .fechaActualizacionKilometraje(entity.getFechaActualizacionKilometraje())
+                .estadoEquipoResponse(estado)
+                .empresaId(entity.getEmpresaId())
+                .totalObservacionesPendientes(totalObservacionesPendientes)
                 .build();
     }
 
