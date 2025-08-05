@@ -8,6 +8,8 @@ import reactor.core.publisher.Mono;
 
 public interface ObservacionEquipoService {
     Flux<ObservacionEquipoResponse> getAllObservacionesByEquipoId(Integer equipoId);
+    Flux<ObservacionEquipoResponse> getAllObservacionesPendientesAndByEquipoId(Integer equipoId);
     Mono<ObservacionEquipoResponse> saveObservacion(ObservacionEquipoNuevoRequest observacionEquipoNuevoRequest);
     Mono<ObservacionEquipoResponse> updateObservacion(Integer observacionId, ObservacionEquipoUpdateRequest request);
+    Mono<Integer> updateEstadoObservacionesByEquipoId(Integer equipoId, Integer nuevoEstadoId);
 }

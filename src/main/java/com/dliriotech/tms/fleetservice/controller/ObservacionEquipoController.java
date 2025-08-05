@@ -20,8 +20,13 @@ public class ObservacionEquipoController {
 
     private final ObservacionEquipoService observacionEquipoService;
 
-    @GetMapping(value = "/equipo/{equipoId}", produces = MediaType.APPLICATION_JSON_VALUE)
-    public Flux<ObservacionEquipoResponse> getAllObservacionesByEquipoId(@PathVariable Integer equipoId) {
+    @GetMapping(value = "/equipo/{equipoId}/observaciones", produces = MediaType.APPLICATION_JSON_VALUE)
+    public Flux<ObservacionEquipoResponse> getObservacionesByEquipo(
+            @PathVariable Integer equipoId,
+            @RequestParam(value = "estado", required = false) String estado) {
+        if ("pendiente".equalsIgnoreCase(estado)) {
+            return observacionEquipoService.getAllObservacionesPendientesAndByEquipoId(equipoId);
+        }
         return observacionEquipoService.getAllObservacionesByEquipoId(equipoId);
     }
 

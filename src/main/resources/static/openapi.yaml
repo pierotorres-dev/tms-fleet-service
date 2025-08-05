@@ -272,12 +272,15 @@ paths:
         '500':
           $ref: '#/components/responses/ErrorResponse'
 
-  /api/v1/observaciones-equipo/equipo/{equipoId}:
+  /api/v1/observaciones-equipo/equipo/{equipoId}/observaciones:
     get:
       tags:
         - Observaciones
-      summary: Obtiene todas las observaciones de un equipo
-      operationId: getAllObservacionesByEquipoId
+      summary: Obtiene las observaciones de un equipo
+      description: |
+        Obtiene todas las observaciones de un equipo específico. Si se proporciona el parámetro 
+        'estado=pendiente', retorna solo las observaciones pendientes.
+      operationId: getObservacionesByEquipo
       parameters:
         - name: equipoId
           in: path
@@ -286,6 +289,12 @@ paths:
           schema:
             type: integer
             format: int32
+        - name: estado
+          in: query
+          description: Filtro por estado de observación (ej. 'pendiente')
+          required: false
+          schema:
+            type: string
       responses:
         '200':
           description: Lista de observaciones del equipo
@@ -303,14 +312,14 @@ paths:
       tags:
         - Observaciones
       summary: Registra una nueva observación de equipo
-      operationId: saveObservacion
+      operationId: createObservacionEquipo
       requestBody:
         description: Datos de la nueva observación
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ObservacionEquipoRequest'
+              $ref: '#/components/schemas/ObservacionEquipoNuevoRequest'
       responses:
         '201':
           description: Observación creada correctamente
@@ -327,14 +336,14 @@ paths:
         '500':
           $ref: '#/components/responses/ErrorResponse'
 
-  /api/v1/observaciones-equipo/{id}:
-    put:
+  /api/v1/observaciones-equipo/equipo/{observacionEquipoId}:
+    patch:
       tags:
         - Observaciones
       summary: Actualiza una observación existente
-      operationId: updateObservacion
+      operationId: updateObservacionEquipo
       parameters:
-        - name: id
+        - name: observacionEquipoId
           in: path
           description: ID de la observación
           required: true
@@ -347,7 +356,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ObservacionEquipoRequest'
+              $ref: '#/components/schemas/ObservacionEquipoUpdateRequest'
       responses:
         '200':
           description: Observación actualizada correctamente
@@ -655,6 +664,46 @@ components:
         - observacionesEquipo
         - observacionesNeumatico
         - totalObservaciones
+
+    ObservacionEquipoNuevoRequest:
+      type: object
+      description: Datos para crear una nueva observación de equipo
+      properties:
+        equipoId:
+          type: integer
+          format: int32
+          description: ID del equipo al que pertenece la observación
+        tipoObservacionId:
+          type: integer
+          format: int32
+          description: ID del tipo de observación
+        descripcion:
+          type: string
+          description: Descripción detallada de la observación
+        usuarioId:
+          type: integer
+          format: int32
+          description: ID del usuario que registra la observación
+      required:
+        - equipoId
+        - tipoObservacionId
+        - usuarioId
+
+    ObservacionEquipoUpdateRequest:
+      type: object
+      description: Datos para actualizar una observación de equipo existente
+      properties:
+        estadoObservacionId:
+          type: integer
+          format: int32
+          description: ID del nuevo estado de la observación
+        comentarioResolucion:
+          type: string
+          description: Comentario sobre la resolución de la observación
+        usuarioResolucionId:
+          type: integer
+          format: int32
+          description: ID del usuario que resuelve la observación
 
     ObservacionEquipoRequest:
       type: object

@@ -29,13 +29,49 @@ public class ObservacionEquipoServiceImpl implements ObservacionEquipoService {
 
     @Override
     public Flux<ObservacionEquipoResponse> getAllObservacionesByEquipoId(Integer equipoId) {
+        log.info("Obteniendo todas las observaciones para equipo {}", equipoId);
+        
+        // Validación de parámetros
+        if (equipoId == null || equipoId <= 0) {
+            return Flux.error(new ObservacionEquipoException(
+                    "FLEET-OBS-VAL-001", "ID de equipo inválido: " + equipoId));
+        }
+        
         return observacionEquipoRepository.findByEquipoId(equipoId)
                 .flatMap(this::enrichObservacionWithRelations)
                 .doOnSubscribe(s -> log.info("Iniciando consulta a la lista de observaciones del equipo {}", equipoId))
                 .doOnComplete(() -> log.info("Consulta a la lista de observaciones del equipo {} completada", equipoId))
                 .doOnError(error -> log.error("Error al obtener observaciones para el equipo {}: {}", equipoId, error.getMessage()))
-                .onErrorResume(e -> Flux.error(new ObservacionEquipoException(
-                        "FLEET-OBS-OPE-001", "Error al obtener observaciones del equipo " + equipoId)));
+                .switchIfEmpty(Flux.defer(() -> {
+                    log.debug("No se encontraron observaciones para el equipo {}", equipoId);
+                    return Flux.empty();
+                }));
+    }
+
+    @Override
+    public Flux<ObservacionEquipoResponse> getAllObservacionesPendientesAndByEquipoId(Integer equipoId) {
+        log.info("Obteniendo observaciones pendientes para equipo {}", equipoId);
+        
+        // Validación de parámetros
+        if (equipoId == null || equipoId <= 0) {
+            return Flux.error(new ObservacionEquipoException(
+                    "FLEET-OBS-VAL-001", "ID de equipo inválido: " + equipoId));
+        }
+        
+        // Primero obtener el ID del estado "Pendiente" desde el caché
+        return observacionMasterDataCacheService.getEstadoObservacionIdByNombre(EstadoObservacionConstants.PENDIENTE)
+                .onErrorMap(error -> ObservacionCreationException.estadoObservacionNotFound(EstadoObservacionConstants.PENDIENTE))
+                .flatMapMany(estadoPendienteId ->
+                    observacionEquipoRepository.findByEquipoIdAndEstadoIdOrderByFechaDesc(equipoId, estadoPendienteId)
+                )
+                .flatMap(this::enrichObservacionWithRelations)
+                .doOnComplete(() -> log.info("Consulta de observaciones pendientes para equipo {} completada", equipoId))
+                .doOnError(error -> log.error("Error al obtener observaciones pendientes para equipo {}: {}", 
+                    equipoId, error.getMessage()))
+                .switchIfEmpty(Flux.defer(() -> {
+                    log.debug("No se encontraron observaciones pendientes para el equipo {}", equipoId);
+                    return Flux.empty();
+                }));
     }
 
     @Override
@@ -90,6 +126,29 @@ public class ObservacionEquipoServiceImpl implements ObservacionEquipoService {
                 .flatMap(this::enrichObservacionWithRelations)
                 .doOnSuccess(response -> log.info("Observación actualizada exitosamente con ID: {}", response.getId()))
                 .doOnError(error -> log.error("Error al actualizar observación con ID {}: {}", observacionId, error.getMessage()));
+    }
+
+    @Override
+    public Mono<Integer> updateEstadoObservacionesByEquipoId(Integer equipoId, Integer nuevoEstadoId) {
+        log.info("Iniciando actualización masiva de estado para equipo {}", equipoId);
+        
+        // Validación de parámetros
+        if (equipoId == null || equipoId <= 0) {
+            return Mono.error(new ObservacionEquipoException(
+                    "FLEET-OBS-VAL-001", "ID de equipo inválido: " + equipoId));
+        }
+        if (nuevoEstadoId == null || nuevoEstadoId <= 0) {
+            return Mono.error(new ObservacionEquipoException(
+                    "FLEET-OBS-VAL-002", "ID de estado inválido: " + nuevoEstadoId));
+        }
+        
+        return observacionEquipoRepository.updateEstadoByEquipoId(equipoId, nuevoEstadoId)
+                .doOnSubscribe(s -> log.info("Iniciando actualización masiva para equipo {}", equipoId))
+                .doOnSuccess(count -> log.info("Actualizadas {} observaciones para el equipo {}", count, equipoId))
+                .doOnError(error -> log.error("Error al actualizar estados de observaciones para equipo {}: {}",
+                        equipoId, error.getMessage()))
+                .onErrorMap(error -> new ObservacionEquipoException(
+                        "FLEET-OBS-OPE-003", "Error al actualizar estado de observaciones para equipo " + equipoId));
     }
 
     private Mono<ObservacionEquipoResponse> enrichObservacionWithRelations(ObservacionEquipo observacion) {
