@@ -36,8 +36,8 @@ public class EquipoServiceImpl implements EquipoService {
     public Flux<EquipoResponse> getAllEquiposByEmpresaId(Integer empresaId) {
         return equipoRepository.findByEmpresaId(empresaId)
                 .flatMap(this::enrichEquipoWithRelations)
-                .doOnSubscribe(s -> log.debug("Iniciando consulta de equipos para empresa {}", empresaId))
-                .doOnComplete(() -> log.debug("Consulta de equipos para empresa {} completada", empresaId))
+                .doOnSubscribe(s -> log.info("Iniciando consulta de equipos para empresa {}", empresaId))
+                .doOnComplete(() -> log.info("Consulta de equipos para empresa {} completada", empresaId))
                 .doOnError(error -> log.error("Error al obtener equipos para empresa {}: {}",
                         empresaId, error.getMessage()))
                 .onErrorResume(e -> Flux.error(new EquipoException(
@@ -48,8 +48,8 @@ public class EquipoServiceImpl implements EquipoService {
     public Flux<EquipoConObservacionesResponse> getAllEquiposConObservacionesByEmpresaId(Integer empresaId) {
         return equipoRepository.findByEmpresaId(empresaId)
                 .flatMap(this::enrichEquipoWithObservaciones)
-                .doOnSubscribe(s -> log.debug("Iniciando consulta de equipos con observaciones para empresa {}", empresaId))
-                .doOnComplete(() -> log.debug("Consulta de equipos con observaciones para empresa {} completada", empresaId))
+                .doOnSubscribe(s -> log.info("Iniciando consulta de equipos con observaciones para empresa {}", empresaId))
+                .doOnComplete(() -> log.info("Consulta de equipos con observaciones para empresa {} completada", empresaId))
                 .doOnError(error -> log.error("Error al obtener equipos con observaciones para empresa {}: {}",
                         empresaId, error.getMessage()))
                 .onErrorResume(e -> Flux.error(new EquipoException(
@@ -61,8 +61,8 @@ public class EquipoServiceImpl implements EquipoService {
         return equipoRepository.findById(id)
                 .switchIfEmpty(Mono.error(new EquipoNotFoundException(id.toString())))
                 .flatMap(this::enrichEquipoWithRelations)
-                .doOnSubscribe(s -> log.debug("Iniciando consulta de equipo {}", id))
-                .doOnSuccess(result -> log.debug("Consulta de equipo {} completada", id))
+                .doOnSubscribe(s -> log.info("Iniciando consulta de equipo {}", id))
+                .doOnSuccess(result -> log.info("Consulta de equipo {} completada", id))
                 .doOnError(error -> log.error("Error al obtener equipo {}: {}", id, error.getMessage()));
     }
 
@@ -72,8 +72,8 @@ public class EquipoServiceImpl implements EquipoService {
 
         return equipoRepository.save(entity)
                 .flatMap(this::enrichEquipoWithRelations)
-                .doOnSubscribe(s -> log.debug("Iniciando guardado de nuevo equipo"))
-                .doOnSuccess(result -> log.debug("Equipo guardado exitosamente: {}", result.getId()))
+                .doOnSubscribe(s -> log.info("Iniciando guardado de nuevo equipo"))
+                .doOnSuccess(result -> log.info("Equipo guardado exitosamente: {}", result.getId()))
                 .doOnError(error -> log.error("Error al guardar equipo: {}", error.getMessage()))
                 .onErrorResume(e -> {
                     if (e instanceof org.springframework.dao.DuplicateKeyException) {
@@ -93,8 +93,8 @@ public class EquipoServiceImpl implements EquipoService {
                     return equipoRepository.save(existing);
                 })
                 .flatMap(this::enrichEquipoWithRelations)
-                .doOnSubscribe(s -> log.debug("Iniciando actualización de equipo {}", id))
-                .doOnSuccess(result -> log.debug("Equipo {} actualizado exitosamente", id))
+                .doOnSubscribe(s -> log.info("Iniciando actualización de equipo {}", id))
+                .doOnSuccess(result -> log.info("Equipo {} actualizado exitosamente", id))
                 .doOnError(error -> log.error("Error al actualizar equipo {}: {}", id, error.getMessage()))
                 .onErrorResume(e -> {
                     if (e instanceof org.springframework.dao.DuplicateKeyException) {
@@ -131,8 +131,8 @@ public class EquipoServiceImpl implements EquipoService {
                             .then(equipoRepository.save(equipo));
                 })
                 .flatMap(this::enrichEquipoWithRelations)
-                .doOnSubscribe(s -> log.debug("Iniciando actualización de kilometraje para equipo {}", id))
-                .doOnSuccess(result -> log.debug("Kilometraje del equipo {} actualizado exitosamente", id))
+                .doOnSubscribe(s -> log.info("Iniciando actualización de kilometraje para equipo {}", id))
+                .doOnSuccess(result -> log.info("Kilometraje del equipo {} actualizado exitosamente", id))
                 .doOnError(error -> log.error("Error al actualizar kilometraje del equipo {}: {}", id, error.getMessage()))
                 .onErrorResume(e -> e instanceof EquipoNotFoundException ? Mono.error(e)
                         : Mono.error(new EquipoException(
@@ -178,9 +178,9 @@ public class EquipoServiceImpl implements EquipoService {
                 .getEsquemaEquipo(equipo.getEsquemaEquipoId())
                 .subscribeOn(Schedulers.boundedElastic());
 
-        // Obtener el conteo de observaciones pendientes
-        Mono<Long> observacionesMono = observacionCountService
-                .contarObservacionesPendientesPorEquipo(equipo.getId())
+        // Obtener el conteo detallado de observaciones pendientes
+        Mono<ObservacionesCountResponse> observacionesMono = observacionCountService
+                .obtenerConteoDetalladoObservacionesPendientes(equipo.getId())
                 .subscribeOn(Schedulers.boundedElastic());
 
         // Ejecutar todas las consultas en paralelo para maximizar el rendimiento
@@ -226,14 +226,14 @@ public class EquipoServiceImpl implements EquipoService {
     }
 
     /**
-     * Mapea una entidad Equipo y sus relaciones al DTO con conteo de observaciones.
+     * Mapea una entidad Equipo y sus relaciones al DTO con conteo detallado de observaciones.
      */
     private EquipoConObservacionesResponse mapEntityToResponseConObservaciones(
             Equipo entity,
             EstadoEquipoResponse estado,
             TipoEquipoResponse tipoEquipo,
             EsquemaEquipoResponse esquemaEquipo,
-            Long totalObservacionesPendientes) {
+            ObservacionesCountResponse observacionesCount) {
         return EquipoConObservacionesResponse.builder()
                 .id(entity.getId())
                 .placa(entity.getPlaca())
@@ -245,7 +245,7 @@ public class EquipoServiceImpl implements EquipoService {
                 .fechaActualizacionKilometraje(entity.getFechaActualizacionKilometraje())
                 .estadoEquipoResponse(estado)
                 .empresaId(entity.getEmpresaId())
-                .totalObservacionesPendientes(totalObservacionesPendientes)
+                .observacionesCount(observacionesCount)
                 .build();
     }
 

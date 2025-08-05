@@ -54,7 +54,7 @@ public class EquipoEntityCacheServiceImpl implements EquipoEntityCacheService {
                                 "FLEET-EQP-NF-001", "Estado de equipo no encontrado: " + estadoId)))
                         .flatMap(estado -> cacheEntity(cacheKey, estado)
                                 .thenReturn(estado)))
-                .doOnSuccess(estado -> log.debug("Estado de equipo {} obtenido desde cache/DB", estadoId))
+                .doOnSuccess(estado -> log.info("Estado de equipo {} obtenido desde cache/DB", estadoId))
                 .doOnError(error -> log.error("Error al obtener estado de equipo {}: {}", estadoId, error.getMessage()));
     }
 
@@ -73,7 +73,7 @@ public class EquipoEntityCacheServiceImpl implements EquipoEntityCacheService {
                                 .build())
                         .flatMap(tipoResponse -> cacheEntity(cacheKey, tipoResponse)
                                 .thenReturn(tipoResponse)))
-                .doOnSuccess(tipo -> log.debug("Tipo de equipo {} obtenido desde cache/DB", tipoEquipoId))
+                .doOnSuccess(tipo -> log.info("Tipo de equipo {} obtenido desde cache/DB", tipoEquipoId))
                 .doOnError(error -> log.error("Error al obtener tipo de equipo {}: {}", tipoEquipoId, error.getMessage()));
     }
 
@@ -92,7 +92,7 @@ public class EquipoEntityCacheServiceImpl implements EquipoEntityCacheService {
                                 .build())
                         .flatMap(esquemaResponse -> cacheEntity(cacheKey, esquemaResponse)
                                 .thenReturn(esquemaResponse)))
-                .doOnSuccess(esquema -> log.debug("Esquema de equipo {} obtenido desde cache/DB", esquemaEquipoId))
+                .doOnSuccess(esquema -> log.info("Esquema de equipo {} obtenido desde cache/DB", esquemaEquipoId))
                 .doOnError(error -> log.error("Error al obtener esquema de equipo {}: {}", esquemaEquipoId, error.getMessage()));
     }
 
@@ -100,7 +100,7 @@ public class EquipoEntityCacheServiceImpl implements EquipoEntityCacheService {
     public Mono<Void> invalidateEstadoEquipo(Integer estadoId) {
         String cacheKey = buildCacheKey(estadoCachePrefix, estadoId);
         return redisTemplate.delete(cacheKey)
-                .doOnSuccess(result -> log.debug("Cache invalidado para estado de equipo {}", estadoId))
+                .doOnSuccess(result -> log.info("Cache invalidado para estado de equipo {}", estadoId))
                 .then();
     }
 
@@ -108,7 +108,7 @@ public class EquipoEntityCacheServiceImpl implements EquipoEntityCacheService {
     public Mono<Void> invalidateTipoEquipo(Integer tipoEquipoId) {
         String cacheKey = buildCacheKey(tipoCachePrefix, tipoEquipoId);
         return redisTemplate.delete(cacheKey)
-                .doOnSuccess(result -> log.debug("Cache invalidado para tipo de equipo {}", tipoEquipoId))
+                .doOnSuccess(result -> log.info("Cache invalidado para tipo de equipo {}", tipoEquipoId))
                 .then();
     }
 
@@ -116,7 +116,7 @@ public class EquipoEntityCacheServiceImpl implements EquipoEntityCacheService {
     public Mono<Void> invalidateEsquemaEquipo(Integer esquemaEquipoId) {
         String cacheKey = buildCacheKey(esquemaCachePrefix, esquemaEquipoId);
         return redisTemplate.delete(cacheKey)
-                .doOnSuccess(result -> log.debug("Cache invalidado para esquema de equipo {}", esquemaEquipoId))
+                .doOnSuccess(result -> log.info("Cache invalidado para esquema de equipo {}", esquemaEquipoId))
                 .then();
     }
 
@@ -131,14 +131,14 @@ public class EquipoEntityCacheServiceImpl implements EquipoEntityCacheService {
                     try {
                         return objectMapper.convertValue(cachedData, entityType);
                     } catch (Exception e) {
-                        log.warn("Error al deserializar datos de cache {}: {}", cacheKey, e.getMessage());
+                        log.info("Error al deserializar datos de cache {}: {}", cacheKey, e.getMessage());
                         return null;
                     }
                 }).subscribeOn(Schedulers.boundedElastic()))
                 .filter(entity -> entity != null)
-                .doOnNext(entity -> log.debug("Entidad obtenida desde cache: {}", cacheKey))
+                .doOnNext(entity -> log.info("Entidad obtenida desde cache: {}", cacheKey))
                 .onErrorResume(error -> {
-                    log.warn("Error al recuperar entidad desde cache {}: {}", cacheKey, error.getMessage());
+                    log.info("Error al recuperar entidad desde cache {}: {}", cacheKey, error.getMessage());
                     return Mono.empty();
                 });
     }
@@ -147,8 +147,8 @@ public class EquipoEntityCacheServiceImpl implements EquipoEntityCacheService {
         Duration ttl = Duration.ofHours(cacheTtlHours);
         return redisTemplate.opsForValue()
                 .set(cacheKey, entity, ttl)
-                .doOnSuccess(result -> log.debug("Entidad almacenada en cache: {}", cacheKey))
-                .doOnError(error -> log.warn("Error al almacenar entidad en cache {}: {}", cacheKey, error.getMessage()))
+                .doOnSuccess(result -> log.info("Entidad almacenada en cache: {}", cacheKey))
+                .doOnError(error -> log.info("Error al almacenar entidad en cache {}: {}", cacheKey, error.getMessage()))
                 .onErrorResume(error -> Mono.empty()) // No fallar si el cache falla
                 .then();
     }

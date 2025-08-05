@@ -120,7 +120,10 @@ paths:
     get:
       tags:
         - Equipos
-      summary: Obtiene todos los equipos por empresa con el conteo de observaciones pendientes
+      summary: Obtiene todos los equipos por empresa con el conteo detallado de observaciones pendientes
+      description: |
+        Retorna la lista de equipos de una empresa específica incluyendo un conteo detallado
+        de las observaciones pendientes desglosado por tipo (equipo, neumático y total).
       operationId: getAllEquiposConObservacionesByEmpresaId
       parameters:
         - name: empresaId
@@ -132,7 +135,7 @@ paths:
             format: int32
       responses:
         '200':
-          description: Lista de equipos con conteo de observaciones pendientes
+          description: Lista de equipos con conteo detallado de observaciones pendientes
           content:
             application/json:
               schema:
@@ -623,16 +626,35 @@ components:
         empresaId:
           type: integer
           format: int32
-        totalObservacionesPendientes:
-          type: integer
-          format: int64
-          description: Total de observaciones pendientes para este equipo (incluye observaciones de equipo y neumáticos)
+        observacionesCount:
+          $ref: '#/components/schemas/ObservacionesCountResponse'
       required:
         - id
         - placa
         - estadoEquipoResponse
         - empresaId
-        - totalObservacionesPendientes
+        - observacionesCount
+
+    ObservacionesCountResponse:
+      type: object
+      description: Conteo detallado de observaciones pendientes por tipo
+      properties:
+        observacionesEquipo:
+          type: integer
+          format: int64
+          description: Número de observaciones pendientes específicas del equipo
+        observacionesNeumatico:
+          type: integer
+          format: int64
+          description: Número de observaciones pendientes de neumáticos del equipo
+        totalObservaciones:
+          type: integer
+          format: int64
+          description: Total de observaciones pendientes (suma de equipo + neumático)
+      required:
+        - observacionesEquipo
+        - observacionesNeumatico
+        - totalObservaciones
 
     ObservacionEquipoRequest:
       type: object

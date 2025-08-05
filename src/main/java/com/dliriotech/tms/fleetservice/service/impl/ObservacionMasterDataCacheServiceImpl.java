@@ -48,7 +48,7 @@ public class ObservacionMasterDataCacheServiceImpl implements ObservacionMasterD
     public Mono<Void> invalidateEstadoObservacionIdByNombreCache(String nombre) {
         String cacheKey = ESTADO_OBSERVACION_BYNAME_PREFIX + nombre;
         return redisTemplate.delete(cacheKey)
-                .doOnSuccess(v -> log.debug("Cache de estado observación by name {} invalidado", nombre))
+                .doOnSuccess(v -> log.info("Cache de estado observación by name {} invalidado", nombre))
                 .then();
     }
 }

@@ -22,5 +22,5 @@ public class EquipoConObservacionesResponse {
     private LocalDate fechaActualizacionKilometraje;
     private EstadoEquipoResponse estadoEquipoResponse;
     private Integer empresaId;
-    private Long totalObservacionesPendientes;
+    private ObservacionesCountResponse observacionesCount;
 }

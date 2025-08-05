@@ -34,8 +34,8 @@ public class ObservacionEquipoServiceImpl implements ObservacionEquipoService {
     public Flux<ObservacionEquipoResponse> getAllObservacionesByEquipoId(Integer equipoId) {
         return observacionEquipoRepository.findByEquipoId(equipoId)
                 .flatMap(this::enrichObservacionWithRelations)
-                .doOnSubscribe(s -> log.debug("Iniciando consulta a la lista de observaciones del equipo {}", equipoId))
-                .doOnComplete(() -> log.debug("Consulta a la lista de observaciones del equipo {} completada", equipoId))
+                .doOnSubscribe(s -> log.info("Iniciando consulta a la lista de observaciones del equipo {}", equipoId))
+                .doOnComplete(() -> log.info("Consulta a la lista de observaciones del equipo {} completada", equipoId))
                 .doOnError(error -> log.error("Error al obtener observaciones para el equipo {}: {}", equipoId, error.getMessage()))
                 .onErrorResume(e -> Flux.error(new ObservacionEquipoException(
                         "FLEET-OBS-OPE-001", "Error al obtener observaciones del equipo " + equipoId)));
@@ -48,8 +48,8 @@ public class ObservacionEquipoServiceImpl implements ObservacionEquipoService {
 
         return observacionEquipoRepository.save(entity)
                 .flatMap(this::enrichObservacionWithRelations)
-                .doOnSubscribe(s -> log.debug("Iniciando guardado de nueva observación para el equipo {}", entity.getEquipoId()))
-                .doOnSuccess(result -> log.debug("Observación de equipo guardada exitosamente: {}", result.getId()))
+                .doOnSubscribe(s -> log.info("Iniciando guardado de nueva observación para el equipo {}", entity.getEquipoId()))
+                .doOnSuccess(result -> log.info("Observación de equipo guardada exitosamente: {}", result.getId()))
                 .doOnError(error -> log.error("Error al guardar observación de equipo: {}", error.getMessage()))
                 .onErrorResume(e -> Mono.error(new ObservacionEquipoException(
                         "FLEET-OBS-OPE-002", "Error al guardar observación de equipo")));
@@ -64,8 +64,8 @@ public class ObservacionEquipoServiceImpl implements ObservacionEquipoService {
                     return observacionEquipoRepository.save(existing);
                 })
                 .flatMap(this::enrichObservacionWithRelations)
-                .doOnSubscribe(s -> log.debug("Iniciando actualización de observación {}", id))
-                .doOnSuccess(result -> log.debug("Observación {} actualizada exitosamente", id))
+                .doOnSubscribe(s -> log.info("Iniciando actualización de observación {}", id))
+                .doOnSuccess(result -> log.info("Observación {} actualizada exitosamente", id))
                 .doOnError(error -> log.error("Error al actualizar observación {}: {}", id, error.getMessage()))
                 .onErrorResume(e -> e instanceof ResourceNotFoundException ? Mono.error(e) :
                         Mono.error(new ObservacionEquipoException(
@@ -74,7 +74,7 @@ public class ObservacionEquipoServiceImpl implements ObservacionEquipoService {
 
     public Mono<Integer> updateEstadoObservacionesByEquipoId(Integer equipoId, Integer nuevoEstadoId) {
         return observacionEquipoRepository.updateEstadoByEquipoId(equipoId, nuevoEstadoId)
-                .doOnSubscribe(s -> log.debug("Iniciando actualización masiva para equipo {}", equipoId))
+                .doOnSubscribe(s -> log.info("Iniciando actualización masiva para equipo {}", equipoId))
                 .doOnSuccess(count -> log.info("Actualizadas {} observaciones para el equipo {}", count, equipoId))
                 .doOnError(error -> log.error("Error al actualizar estados de observaciones para equipo {}: {}",
                         equipoId, error.getMessage()))
