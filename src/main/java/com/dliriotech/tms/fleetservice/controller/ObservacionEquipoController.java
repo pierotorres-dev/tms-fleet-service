@@ -31,10 +31,10 @@ public class ObservacionEquipoController {
         return observacionEquipoService.saveObservacion(request);
     }
 
-    @PatchMapping(value = "/equipo/{equipoId}")
-    public Mono<Integer> updateObservacionEquipo(
-            @PathVariable Integer equipoId,
+    @PatchMapping(value = "/equipo/{observacionEquipoId}", produces = MediaType.APPLICATION_JSON_VALUE)
+    public Mono<ObservacionEquipoResponse> updateObservacionEquipo(
+            @PathVariable Integer observacionEquipoId,
             @Valid @RequestBody ObservacionEquipoUpdateRequest request) {
-        return observacionEquipoService.updateObservacion(equipoId, request);
+        return observacionEquipoService.updateObservacion(observacionEquipoId, request);
     }
 }

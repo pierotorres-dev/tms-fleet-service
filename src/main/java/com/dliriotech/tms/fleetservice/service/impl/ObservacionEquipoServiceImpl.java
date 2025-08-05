@@ -5,6 +5,7 @@ import com.dliriotech.tms.fleetservice.dto.*;
 import com.dliriotech.tms.fleetservice.entity.ObservacionEquipo;
 import com.dliriotech.tms.fleetservice.exception.ObservacionCreationException;
 import com.dliriotech.tms.fleetservice.exception.ObservacionEquipoException;
+import com.dliriotech.tms.fleetservice.exception.ObservacionUpdateException;
 import com.dliriotech.tms.fleetservice.repository.ObservacionEquipoRepository;
 import com.dliriotech.tms.fleetservice.service.ObservacionEquipoService;
 import com.dliriotech.tms.fleetservice.service.ObservacionMasterDataCacheService;
@@ -67,14 +68,28 @@ public class ObservacionEquipoServiceImpl implements ObservacionEquipoService {
     }
 
     @Override
-    public Mono<Integer> updateObservacion(Integer equipoId, ObservacionEquipoUpdateRequest request) {
-        return observacionEquipoRepository.updateEstadoByEquipoId(equipoId, nuevoEstadoId)
-                .doOnSubscribe(s -> log.info("Iniciando actualización masiva para equipo {}", equipoId))
-                .doOnSuccess(count -> log.info("Actualizadas {} observaciones para el equipo {}", count, equipoId))
-                .doOnError(error -> log.error("Error al actualizar estados de observaciones para equipo {}: {}",
-                        equipoId, error.getMessage()))
-                .onErrorResume(e -> Mono.error(new ObservacionEquipoException(
-                        "FLEET-OBS-OPE-003", "Error al actualizar estado de observaciones para equipo " + equipoId)));
+    public Mono<ObservacionEquipoResponse> updateObservacion(Integer observacionId, ObservacionEquipoUpdateRequest request) {
+        log.info("Actualizando observación con ID: {}", observacionId);
+        
+        // Validaciones de entrada
+        return Mono.fromCallable(() -> validateUpdateRequest(observacionId, request))
+                .subscribeOn(Schedulers.boundedElastic())
+                .flatMap(validatedRequest -> 
+                    observacionEquipoRepository.findById(observacionId)
+                        .switchIfEmpty(Mono.error(ObservacionUpdateException.notFound(observacionId)))
+                )
+                .flatMap(existingObservacion ->
+                    validateBusinessRules(existingObservacion, request)
+                        .then(Mono.fromCallable(() -> applyUpdates(existingObservacion, request))
+                            .subscribeOn(Schedulers.boundedElastic()))
+                )
+                .flatMap(updatedObservacion ->
+                    observacionEquipoRepository.save(updatedObservacion)
+                        .onErrorMap(error -> ObservacionUpdateException.databaseError("actualizar observación", error))
+                )
+                .flatMap(this::enrichObservacionWithRelations)
+                .doOnSuccess(response -> log.info("Observación actualizada exitosamente con ID: {}", response.getId()))
+                .doOnError(error -> log.error("Error al actualizar observación con ID {}: {}", observacionId, error.getMessage()));
     }
 
     private Mono<ObservacionEquipoResponse> enrichObservacionWithRelations(ObservacionEquipo observacion) {
@@ -155,5 +170,99 @@ public class ObservacionEquipoServiceImpl implements ObservacionEquipoService {
                 .usuarioResolucion(null)
                 .usuarioId(request.getUsuarioId())
                 .build();
+    }
+
+    private ObservacionEquipoUpdateRequest validateUpdateRequest(Integer observacionId, ObservacionEquipoUpdateRequest request) {
+        if (observacionId == null || observacionId <= 0) {
+            throw ObservacionUpdateException.invalidRequest("observacionId", observacionId);
+        }
+        if (request == null) {
+            throw ObservacionUpdateException.invalidRequest("request", "null");
+        }
+        // Validar que al menos un campo está presente para actualizar
+        if (request.getEstadoObservacionId() == null && 
+            request.getUsuarioResolucionId() == null && 
+            (request.getComentarioResolucion() == null || request.getComentarioResolucion().trim().isEmpty())) {
+            throw ObservacionUpdateException.noFieldsToUpdate();
+        }
+        // Validar campos específicos si están presentes
+        if (request.getEstadoObservacionId() != null && request.getEstadoObservacionId() <= 0) {
+            throw ObservacionUpdateException.invalidRequest("estadoObservacionId", request.getEstadoObservacionId());
+        }
+        if (request.getUsuarioResolucionId() != null && request.getUsuarioResolucionId() <= 0) {
+            throw ObservacionUpdateException.invalidRequest("usuarioResolucionId", request.getUsuarioResolucionId());
+        }
+        return request;
+    }
+    
+    private ObservacionEquipo applyUpdates(ObservacionEquipo existing, ObservacionEquipoUpdateRequest request) {
+        ObservacionEquipo.ObservacionEquipoBuilder builder = existing.toBuilder();
+        
+        // Si se está cambiando el estado de observación
+        if (request.getEstadoObservacionId() != null) {
+            builder.estadoId(request.getEstadoObservacionId())
+                   .fechaResolucion(LocalDateTime.now(ZoneId.of("America/Lima")))
+                   .usuarioResolucion(request.getUsuarioResolucionId());
+        }
+        
+        // Actualizar comentario de resolución si se proporciona
+        if (request.getComentarioResolucion() != null) {
+            builder.comentarioResolucion(request.getComentarioResolucion().trim());
+        }
+        
+        return builder.build();
+    }
+    
+    private Mono<Void> validateBusinessRules(ObservacionEquipo existing, ObservacionEquipoUpdateRequest request) {
+        return observacionMasterDataCacheService.getEstadoObservacion(existing.getEstadoId())
+                .flatMap(currentState -> {
+                    String currentStateName = currentState.getNombre();
+                    
+                    // Verificar si el estado actual es final (no se puede modificar)
+                    if (EstadoObservacionConstants.RESUELTO.equalsIgnoreCase(currentStateName)) {
+                        return Mono.error(ObservacionUpdateException.finalStateModification(currentStateName));
+                    }
+                    if (EstadoObservacionConstants.CANCELADO.equalsIgnoreCase(currentStateName)) {
+                        return Mono.error(ObservacionUpdateException.finalStateModification(currentStateName));
+                    }
+                    
+                    // Si se está cambiando el estado, validar la transición
+                    if (request.getEstadoObservacionId() != null && 
+                        !request.getEstadoObservacionId().equals(existing.getEstadoId())) {
+                        
+                        return observacionMasterDataCacheService.getEstadoObservacion(request.getEstadoObservacionId())
+                                .flatMap(newState -> {
+                                    String newStateName = newState.getNombre();
+                                    
+                                    // Validar transiciones permitidas desde "Pendiente"
+                                    if (EstadoObservacionConstants.PENDIENTE.equalsIgnoreCase(currentStateName)) {
+                                        // Desde Pendiente solo se puede ir a Resuelta o Cancelada
+                                        if (EstadoObservacionConstants.RESUELTO.equalsIgnoreCase(newStateName) ||
+                                            EstadoObservacionConstants.CANCELADO.equalsIgnoreCase(newStateName)) {
+                                            return Mono.<Void>empty();
+                                        } else {
+                                            return Mono.error(ObservacionUpdateException.stateTransitionNotAllowed(currentStateName, newStateName));
+                                        }
+                                    }
+                                    
+                                    // Para cualquier otro estado, no permitir cambios
+                                    return Mono.error(ObservacionUpdateException.stateTransitionNotAllowed(currentStateName, newStateName));
+                                })
+                                .onErrorMap(error -> {
+                                    if (error instanceof ObservacionUpdateException) {
+                                        return error;
+                                    }
+                                    return ObservacionUpdateException.masterDataError("obtener nuevo estado observacion", error);
+                                });
+                    }
+                    
+                    return Mono.<Void>empty();
+                })
+                .onErrorMap(error -> {
+                    if (error instanceof ObservacionUpdateException) {
+                        return error;
+                    }
+                    return ObservacionUpdateException.masterDataError("obtener estado observacion actual", error);
+                });
     }
 }
