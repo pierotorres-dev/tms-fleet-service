@@ -9,10 +9,10 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class TipoObservacionResponse {
-    private Integer id;
-    private String nombre;
-    private String ambito;
-    private String descripcion;
-    private Boolean activo;
+public class ObservacionEquipoUpdateRequest {
+    private Integer estadoObservacionId;
+
+    private String comentarioResolucion;
+
+    private Integer usuarioResolucionId;
 }

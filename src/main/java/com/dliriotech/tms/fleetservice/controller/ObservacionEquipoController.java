@@ -1,7 +1,8 @@
 package com.dliriotech.tms.fleetservice.controller;
 
-import com.dliriotech.tms.fleetservice.dto.ObservacionEquipoRequest;
+import com.dliriotech.tms.fleetservice.dto.ObservacionEquipoNuevoRequest;
 import com.dliriotech.tms.fleetservice.dto.ObservacionEquipoResponse;
+import com.dliriotech.tms.fleetservice.dto.ObservacionEquipoUpdateRequest;
 import com.dliriotech.tms.fleetservice.service.ObservacionEquipoService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -26,21 +27,14 @@ public class ObservacionEquipoController {
 
     @PostMapping(produces = MediaType.APPLICATION_JSON_VALUE)
     @ResponseStatus(HttpStatus.CREATED)
-    public Mono<ObservacionEquipoResponse> saveObservacion(@Valid @RequestBody ObservacionEquipoRequest request) {
+    public Mono<ObservacionEquipoResponse> createObservacionEquipo(@Valid @RequestBody ObservacionEquipoNuevoRequest request) {
         return observacionEquipoService.saveObservacion(request);
     }
 
-    @PutMapping(value = "/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
-    public Mono<ObservacionEquipoResponse> updateObservacion(
-            @PathVariable Integer id,
-            @Valid @RequestBody ObservacionEquipoRequest request) {
-        return observacionEquipoService.updateObservacion(id, request);
-    }
-
-    @PatchMapping(value = "/equipo/{equipoId}/estado/{estadoId}")
-    public Mono<Integer> updateEstadoObservacionesByEquipoId(
+    @PatchMapping(value = "/equipo/{equipoId}")
+    public Mono<Integer> updateObservacionEquipo(
             @PathVariable Integer equipoId,
-            @PathVariable Integer estadoId) {
-        return observacionEquipoService.updateEstadoObservacionesByEquipoId(equipoId, estadoId);
+            @Valid @RequestBody ObservacionEquipoUpdateRequest request) {
+        return observacionEquipoService.updateObservacion(equipoId, request);
     }
 }

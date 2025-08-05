@@ -4,7 +4,7 @@ import com.dliriotech.tms.fleetservice.dto.TipoObservacionResponse;
 import com.dliriotech.tms.fleetservice.entity.TipoObservacion;
 import com.dliriotech.tms.fleetservice.exception.CatalogOperationException;
 import com.dliriotech.tms.fleetservice.infrastructure.cache.ReactiveRedisCacheService;
-import com.dliriotech.tms.fleetservice.repository.TipoObservacionNeumaticoRepository;
+import com.dliriotech.tms.fleetservice.repository.TipoObservacionRepository;
 import com.dliriotech.tms.fleetservice.service.TipoObservacionNeumaticoService;
 import com.fasterxml.jackson.core.type.TypeReference;
 import lombok.RequiredArgsConstructor;
@@ -20,7 +20,7 @@ import java.util.List;
 @Slf4j
 public class TipoObservacionNeumaticoServiceImpl implements TipoObservacionNeumaticoService {
 
-    private final TipoObservacionNeumaticoRepository tipoObservacionNeumaticoRepository;
+    private final TipoObservacionRepository tipoObservacionRepository;
     private final ReactiveRedisCacheService cacheService;
 
     @Value("${app.cache.prefixes.tipo-observacion-neumatico}")
@@ -33,7 +33,7 @@ public class TipoObservacionNeumaticoServiceImpl implements TipoObservacionNeuma
 
         return cacheService.getCachedCollection(
                         cacheKey,
-                        tipoObservacionNeumaticoRepository.findAllByAmbito("NEUMATICO").map(this::mapToDto),
+                        tipoObservacionRepository.findAllByAmbito("NEUMATICO").map(this::mapToDto),
                         typeRef
                 )
                 .doOnError(error -> log.error("Error al obtener tipos de observación neumático", error))
@@ -47,7 +47,7 @@ public class TipoObservacionNeumaticoServiceImpl implements TipoObservacionNeuma
 
         return cacheService.getCachedCollection(
                         cacheKey,
-                        tipoObservacionNeumaticoRepository.findAllByAmbito("EQUIPO").map(this::mapToDto),
+                        tipoObservacionRepository.findAllByAmbito("EQUIPO").map(this::mapToDto),
                         typeRef
                 )
                 .doOnError(error -> log.error("Error al obtener tipos de observación equipo", error))

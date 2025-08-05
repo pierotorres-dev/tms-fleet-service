@@ -18,5 +18,5 @@ public class TipoObservacion {
     private String nombre;
     private String ambito;
     private String descripcion;
-    private Integer activo;
+    private Boolean activo;
 }
