@@ -56,7 +56,7 @@ public class ReactiveRedisCacheService implements ReactiveCacheService {
                 .collectList()
                 .flatMapMany(list -> {
                     if (list.isEmpty()) {
-                        log.warn("No se encontraron datos para cachear: {}", cacheKey);
+                        log.info("No se encontraron datos para cachear: {}", cacheKey);
                         return Flux.empty();
                     }
 
@@ -75,7 +75,7 @@ public class ReactiveRedisCacheService implements ReactiveCacheService {
                     try {
                         return objectMapper.convertValue(cachedList, typeRef);
                     } catch (Exception e) {
-                        log.warn("Error al convertir datos de caché {}: {}", cacheKey, e.getMessage());
+                        log.info("Error al convertir datos de caché {}: {}", cacheKey, e.getMessage());
                         return List.<T>of();
                     }
                 })

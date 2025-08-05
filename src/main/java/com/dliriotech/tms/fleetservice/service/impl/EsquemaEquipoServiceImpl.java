@@ -23,8 +23,8 @@ public class EsquemaEquipoServiceImpl implements EsquemaEquipoService {
         return esquemaEquipoRepository.findByTipoEquipoId(tipoEquipoId)
                 .map(this::mapEntityToResponse)
                 .subscribeOn(Schedulers.boundedElastic())
-                .doOnSubscribe(s -> log.debug("Iniciando consulta de esquemas para tipo de equipo {}", tipoEquipoId))
-                .doOnComplete(() -> log.debug("Consulta de esquemas para tipo de equipo {} completada", tipoEquipoId))
+                .doOnSubscribe(s -> log.info("Iniciando consulta de esquemas para tipo de equipo {}", tipoEquipoId))
+                .doOnComplete(() -> log.info("Consulta de esquemas para tipo de equipo {} completada", tipoEquipoId))
                 .doOnError(error -> log.error("Error al obtener esquemas para tipo de equipo {}: {}", 
                         tipoEquipoId, error.getMessage()))
                 .onErrorResume(e -> Flux.error(new EquipoException(

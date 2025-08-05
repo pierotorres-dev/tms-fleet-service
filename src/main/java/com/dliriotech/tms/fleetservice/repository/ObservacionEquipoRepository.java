@@ -9,6 +9,11 @@ import reactor.core.publisher.Mono;
 public interface ObservacionEquipoRepository extends ReactiveCrudRepository<ObservacionEquipo, Integer> {
     Flux<ObservacionEquipo> findByEquipoId(Integer equipoId);
 
+    Flux<ObservacionEquipo> findByEquipoIdAndEstadoIdOrderByFechaDesc(Integer equipoId, Integer estadoId);
+
     @Query("UPDATE observaciones_equipos SET id_estado_observacion = :nuevoEstadoId WHERE id_equipo = :equipoId")
     Mono<Integer> updateEstadoByEquipoId(Integer equipoId, Integer nuevoEstadoId);
+
+    @Query("SELECT COUNT(*) FROM observaciones_equipos WHERE id_equipo = :equipoId AND id_estado_observacion = :estadoId")
+    Mono<Long> countByEquipoIdAndEstadoId(Integer equipoId, Integer estadoId);
 }

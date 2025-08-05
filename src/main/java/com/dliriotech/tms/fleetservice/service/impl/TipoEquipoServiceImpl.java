@@ -26,8 +26,8 @@ public class TipoEquipoServiceImpl implements TipoEquipoService {
         return tipoEquipoRepository.findAll()
                 .map(this::mapEntityToResponse)
                 .subscribeOn(Schedulers.boundedElastic())
-                .doOnSubscribe(s -> log.debug("Iniciando consulta de todos los tipos de equipo"))
-                .doOnComplete(() -> log.debug("Consulta de todos los tipos de equipo completada"))
+                .doOnSubscribe(s -> log.info("Iniciando consulta de todos los tipos de equipo"))
+                .doOnComplete(() -> log.info("Consulta de todos los tipos de equipo completada"))
                 .doOnError(error -> log.error("Error al obtener tipos de equipo: {}", error.getMessage()))
                 .onErrorResume(e -> Flux.error(new EquipoException(
                         "FLEET-TEQ-OPE-002", "Error al obtener tipos de equipo")));
@@ -41,8 +41,8 @@ public class TipoEquipoServiceImpl implements TipoEquipoService {
                 .flatMap(tipoEquipoRepository::findById)
                 .map(this::mapEntityToResponse)
                 .subscribeOn(Schedulers.boundedElastic())
-                .doOnSubscribe(s -> log.debug("Iniciando consulta de tipos de equipo activos para empresa {}", empresaId))
-                .doOnComplete(() -> log.debug("Consulta de tipos de equipo activos para empresa {} completada", empresaId))
+                .doOnSubscribe(s -> log.info("Iniciando consulta de tipos de equipo activos para empresa {}", empresaId))
+                .doOnComplete(() -> log.info("Consulta de tipos de equipo activos para empresa {} completada", empresaId))
                 .doOnError(error -> log.error("Error al obtener tipos de equipo activos para empresa {}: {}", 
                         empresaId, error.getMessage()))
                 .onErrorResume(e -> Flux.error(new EquipoException(

@@ -26,11 +26,11 @@
 #   JAVA_HOME - location of a JDK home dir, required when download maven via java source
 #   MVNW_REPOURL - repo url base for downloading maven distribution
 #   MVNW_USERNAME/MVNW_PASSWORD - user and password for downloading maven
-#   MVNW_VERBOSE - true: enable verbose log; debug: trace the mvnw script; others: silence the output
+#   MVNW_VERBOSE - true: enable verbose log; info: trace the mvnw script; others: silence the output
 # ----------------------------------------------------------------------------
 
 set -euf
-[ "${MVNW_VERBOSE-}" != debug ] || set -x
+[ "${MVNW_VERBOSE-}" != info ] || set -x
 
 # OS specific support.
 native_path() { printf %s\\n "$1"; }

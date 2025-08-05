@@ -1,5 +1,6 @@
 package com.dliriotech.tms.fleetservice.controller;
 
+import com.dliriotech.tms.fleetservice.dto.EquipoConObservacionesResponse;
 import com.dliriotech.tms.fleetservice.dto.EquipoNuevoRequest;
 import com.dliriotech.tms.fleetservice.dto.EquipoResponse;
 import com.dliriotech.tms.fleetservice.dto.EquipoUpdateKilometrajeRequest;
@@ -24,6 +25,11 @@ public class EquipoController {
     @GetMapping(value = "/empresa/{empresaId}", produces = MediaType.APPLICATION_JSON_VALUE)
     public Flux<EquipoResponse> getAllEquiposByEmpresaId(@PathVariable Integer empresaId) {
         return equipoService.getAllEquiposByEmpresaId(empresaId);
+    }
+
+    @GetMapping(value = "/empresa/{empresaId}/con-observaciones", produces = MediaType.APPLICATION_JSON_VALUE)
+    public Flux<EquipoConObservacionesResponse> getAllEquiposConObservacionesByEmpresaId(@PathVariable Integer empresaId) {
+        return equipoService.getAllEquiposConObservacionesByEmpresaId(empresaId);
     }
 
     @GetMapping(value = "/{id}", produces = MediaType.APPLICATION_JSON_VALUE)

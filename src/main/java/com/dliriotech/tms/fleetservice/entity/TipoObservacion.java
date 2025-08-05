@@ -11,11 +11,12 @@ import org.springframework.data.relational.core.mapping.Table;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@Table("tipos_observaciones_neumaticos")
-public class TipoObservacionNeumatico {
+@Table("tipos_observacion")
+public class TipoObservacion {
     @Id
     private Integer id;
     private String nombre;
+    private String ambito;
     private String descripcion;
-    private Integer activo;
+    private Boolean activo;
 }

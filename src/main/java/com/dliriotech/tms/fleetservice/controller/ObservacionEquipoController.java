@@ -1,7 +1,8 @@
 package com.dliriotech.tms.fleetservice.controller;
 
-import com.dliriotech.tms.fleetservice.dto.ObservacionEquipoRequest;
+import com.dliriotech.tms.fleetservice.dto.ObservacionEquipoNuevoRequest;
 import com.dliriotech.tms.fleetservice.dto.ObservacionEquipoResponse;
+import com.dliriotech.tms.fleetservice.dto.ObservacionEquipoUpdateRequest;
 import com.dliriotech.tms.fleetservice.service.ObservacionEquipoService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -19,28 +20,26 @@ public class ObservacionEquipoController {
 
     private final ObservacionEquipoService observacionEquipoService;
 
-    @GetMapping(value = "/equipo/{equipoId}", produces = MediaType.APPLICATION_JSON_VALUE)
-    public Flux<ObservacionEquipoResponse> getAllObservacionesByEquipoId(@PathVariable Integer equipoId) {
+    @GetMapping(value = "/equipo/{equipoId}/observaciones", produces = MediaType.APPLICATION_JSON_VALUE)
+    public Flux<ObservacionEquipoResponse> getObservacionesByEquipo(
+            @PathVariable Integer equipoId,
+            @RequestParam(value = "estado", required = false) String estado) {
+        if ("pendiente".equalsIgnoreCase(estado)) {
+            return observacionEquipoService.getAllObservacionesPendientesAndByEquipoId(equipoId);
+        }
         return observacionEquipoService.getAllObservacionesByEquipoId(equipoId);
     }
 
     @PostMapping(produces = MediaType.APPLICATION_JSON_VALUE)
     @ResponseStatus(HttpStatus.CREATED)
-    public Mono<ObservacionEquipoResponse> saveObservacion(@Valid @RequestBody ObservacionEquipoRequest request) {
+    public Mono<ObservacionEquipoResponse> createObservacionEquipo(@Valid @RequestBody ObservacionEquipoNuevoRequest request) {
         return observacionEquipoService.saveObservacion(request);
     }
 
-    @PutMapping(value = "/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
-    public Mono<ObservacionEquipoResponse> updateObservacion(
-            @PathVariable Integer id,
-            @Valid @RequestBody ObservacionEquipoRequest request) {
-        return observacionEquipoService.updateObservacion(id, request);
-    }
-
-    @PatchMapping(value = "/equipo/{equipoId}/estado/{estadoId}")
-    public Mono<Integer> updateEstadoObservacionesByEquipoId(
-            @PathVariable Integer equipoId,
-            @PathVariable Integer estadoId) {
-        return observacionEquipoService.updateEstadoObservacionesByEquipoId(equipoId, estadoId);
+    @PatchMapping(value = "/equipo/{observacionEquipoId}", produces = MediaType.APPLICATION_JSON_VALUE)
+    public Mono<ObservacionEquipoResponse> updateObservacionEquipo(
+            @PathVariable Integer observacionEquipoId,
+            @Valid @RequestBody ObservacionEquipoUpdateRequest request) {
+        return observacionEquipoService.updateObservacion(observacionEquipoId, request);
     }
 }

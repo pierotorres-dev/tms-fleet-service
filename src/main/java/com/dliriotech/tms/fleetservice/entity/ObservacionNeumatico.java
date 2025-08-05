@@ -14,15 +14,18 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder(toBuilder = true)
-@Table("observaciones_equipos")
-public class ObservacionEquipo {
+@Table("observaciones_neumatico")
+public class ObservacionNeumatico {
     @Id
     private Integer id;
+
+    @Column("id_neumatico")
+    private Integer neumaticoId;
 
     @Column("id_equipo")
     private Integer equipoId;
 
-    private LocalDateTime fecha;
+    private Integer posicion;
 
     @Column("id_tipo_observacion")
     private Integer tipoObservacionId;
@@ -30,17 +33,20 @@ public class ObservacionEquipo {
     private String descripcion;
 
     @Column("id_estado_observacion")
-    private Integer estadoId;
+    private Integer estadoObservacionId;
+
+    @Column("fecha_creacion")
+    private LocalDateTime fechaCreacion;
+
+    @Column("id_usuario_creacion")
+    private Integer usuarioCreacionId;
 
     @Column("fecha_resolucion")
     private LocalDateTime fechaResolucion;
 
+    @Column("id_usuario_resolucion")
+    private Integer usuarioResolucionId;
+
     @Column("comentario_resolucion")
     private String comentarioResolucion;
-
-    @Column("id_usuario_resolucion")
-    private Integer usuarioResolucion;
-
-    @Column("id_usuario")
-    private Integer usuarioId;
 }

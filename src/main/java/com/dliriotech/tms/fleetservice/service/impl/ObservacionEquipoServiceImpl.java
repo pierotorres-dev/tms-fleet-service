@@ -1,16 +1,14 @@
 package com.dliriotech.tms.fleetservice.service.impl;
 
-import com.dliriotech.tms.fleetservice.dto.EstadoObservacionResponse;
-import com.dliriotech.tms.fleetservice.dto.ObservacionEquipoRequest;
-import com.dliriotech.tms.fleetservice.dto.ObservacionEquipoResponse;
-import com.dliriotech.tms.fleetservice.dto.TipoObservacionNeumaticoResponse;
+import com.dliriotech.tms.fleetservice.constants.EstadoObservacionConstants;
+import com.dliriotech.tms.fleetservice.dto.*;
 import com.dliriotech.tms.fleetservice.entity.ObservacionEquipo;
+import com.dliriotech.tms.fleetservice.exception.ObservacionCreationException;
 import com.dliriotech.tms.fleetservice.exception.ObservacionEquipoException;
-import com.dliriotech.tms.fleetservice.exception.ResourceNotFoundException;
+import com.dliriotech.tms.fleetservice.exception.ObservacionUpdateException;
 import com.dliriotech.tms.fleetservice.repository.ObservacionEquipoRepository;
-import com.dliriotech.tms.fleetservice.service.EstadoObservacionService;
 import com.dliriotech.tms.fleetservice.service.ObservacionEquipoService;
-import com.dliriotech.tms.fleetservice.service.TipoObservacionNeumaticoService;
+import com.dliriotech.tms.fleetservice.service.ObservacionMasterDataCacheService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -27,106 +25,170 @@ import java.time.ZoneId;
 public class ObservacionEquipoServiceImpl implements ObservacionEquipoService {
 
     private final ObservacionEquipoRepository observacionEquipoRepository;
-    private final TipoObservacionNeumaticoService tipoObservacionNeumaticoService;
-    private final EstadoObservacionService estadoObservacionService;
+    private final ObservacionMasterDataCacheService observacionMasterDataCacheService;
 
     @Override
     public Flux<ObservacionEquipoResponse> getAllObservacionesByEquipoId(Integer equipoId) {
+        log.info("Obteniendo todas las observaciones para equipo {}", equipoId);
+        
+        // Validación de parámetros
+        if (equipoId == null || equipoId <= 0) {
+            return Flux.error(new ObservacionEquipoException(
+                    "FLEET-OBS-VAL-001", "ID de equipo inválido: " + equipoId));
+        }
+        
         return observacionEquipoRepository.findByEquipoId(equipoId)
                 .flatMap(this::enrichObservacionWithRelations)
-                .doOnSubscribe(s -> log.debug("Iniciando consulta a la lista de observaciones del equipo {}", equipoId))
-                .doOnComplete(() -> log.debug("Consulta a la lista de observaciones del equipo {} completada", equipoId))
+                .doOnSubscribe(s -> log.info("Iniciando consulta a la lista de observaciones del equipo {}", equipoId))
+                .doOnComplete(() -> log.info("Consulta a la lista de observaciones del equipo {} completada", equipoId))
                 .doOnError(error -> log.error("Error al obtener observaciones para el equipo {}: {}", equipoId, error.getMessage()))
-                .onErrorResume(e -> Flux.error(new ObservacionEquipoException(
-                        "FLEET-OBS-OPE-001", "Error al obtener observaciones del equipo " + equipoId)));
+                .switchIfEmpty(Flux.defer(() -> {
+                    log.debug("No se encontraron observaciones para el equipo {}", equipoId);
+                    return Flux.empty();
+                }));
     }
 
     @Override
-    public Mono<ObservacionEquipoResponse> saveObservacion(ObservacionEquipoRequest request) {
-        ObservacionEquipo entity = mapRequestToEntity(request);
-        entity.setFecha(entity.getFecha() != null ? entity.getFecha() : LocalDateTime.now(ZoneId.of("America/Lima")));
-
-        return observacionEquipoRepository.save(entity)
+    public Flux<ObservacionEquipoResponse> getAllObservacionesPendientesAndByEquipoId(Integer equipoId) {
+        log.info("Obteniendo observaciones pendientes para equipo {}", equipoId);
+        
+        // Validación de parámetros
+        if (equipoId == null || equipoId <= 0) {
+            return Flux.error(new ObservacionEquipoException(
+                    "FLEET-OBS-VAL-001", "ID de equipo inválido: " + equipoId));
+        }
+        
+        // Primero obtener el ID del estado "Pendiente" desde el caché
+        return observacionMasterDataCacheService.getEstadoObservacionIdByNombre(EstadoObservacionConstants.PENDIENTE)
+                .onErrorMap(error -> ObservacionCreationException.estadoObservacionNotFound(EstadoObservacionConstants.PENDIENTE))
+                .flatMapMany(estadoPendienteId ->
+                    observacionEquipoRepository.findByEquipoIdAndEstadoIdOrderByFechaDesc(equipoId, estadoPendienteId)
+                )
                 .flatMap(this::enrichObservacionWithRelations)
-                .doOnSubscribe(s -> log.debug("Iniciando guardado de nueva observación para el equipo {}", entity.getEquipoId()))
-                .doOnSuccess(result -> log.debug("Observación de equipo guardada exitosamente: {}", result.getId()))
-                .doOnError(error -> log.error("Error al guardar observación de equipo: {}", error.getMessage()))
-                .onErrorResume(e -> Mono.error(new ObservacionEquipoException(
-                        "FLEET-OBS-OPE-002", "Error al guardar observación de equipo")));
+                .doOnComplete(() -> log.info("Consulta de observaciones pendientes para equipo {} completada", equipoId))
+                .doOnError(error -> log.error("Error al obtener observaciones pendientes para equipo {}: {}", 
+                    equipoId, error.getMessage()))
+                .switchIfEmpty(Flux.defer(() -> {
+                    log.debug("No se encontraron observaciones pendientes para el equipo {}", equipoId);
+                    return Flux.empty();
+                }));
     }
 
     @Override
-    public Mono<ObservacionEquipoResponse> updateObservacion(Integer id, ObservacionEquipoRequest request) {
-        return observacionEquipoRepository.findById(id)
-                .switchIfEmpty(Mono.error(new ResourceNotFoundException("Observación de equipo", id.toString())))
-                .flatMap(existing -> {
-                    updateEntityFromRequest(existing, request);
-                    return observacionEquipoRepository.save(existing);
-                })
+    public Mono<ObservacionEquipoResponse> saveObservacion(ObservacionEquipoNuevoRequest request) {
+        log.info("Creando nueva observación para equipo {}", request.getEquipoId());
+        
+        // Validaciones de entrada
+        return Mono.fromCallable(() -> validateObservacionRequest(request))
+                .subscribeOn(Schedulers.boundedElastic())
+                .then(observacionMasterDataCacheService.getEstadoObservacionIdByNombre(EstadoObservacionConstants.PENDIENTE)
+                    .onErrorMap(error -> ObservacionCreationException.estadoObservacionNotFound(EstadoObservacionConstants.PENDIENTE)))
+                .flatMap(estadoPendienteId -> 
+                    // Validar que el tipo de observación existe usando cache
+                    observacionMasterDataCacheService.getTipoObservacion(request.getTipoObservacionId())
+                        .onErrorMap(error -> ObservacionCreationException.tipoObservacionNotFound(request.getTipoObservacionId()))
+                        .map(tipoObservacion -> estadoPendienteId)
+                )
+                .flatMap(estadoPendienteId ->
+                    Mono.fromCallable(() -> buildObservacionEntity(request, estadoPendienteId))
+                        .subscribeOn(Schedulers.boundedElastic())
+                )
+                .flatMap(observacionEntity ->
+                    observacionEquipoRepository.save(observacionEntity)
+                        .onErrorMap(error -> ObservacionCreationException.databaseError("guardar observación", error))
+                )
                 .flatMap(this::enrichObservacionWithRelations)
-                .doOnSubscribe(s -> log.debug("Iniciando actualización de observación {}", id))
-                .doOnSuccess(result -> log.debug("Observación {} actualizada exitosamente", id))
-                .doOnError(error -> log.error("Error al actualizar observación {}: {}", id, error.getMessage()))
-                .onErrorResume(e -> e instanceof ResourceNotFoundException ? Mono.error(e) :
-                        Mono.error(new ObservacionEquipoException(
-                                "FLEET-OBS-OPE-004", "Error al actualizar observación " + id)));
+                .doOnSuccess(response -> log.info("Observación de equipo creada exitosamente con ID: {}", response.getId()))
+                .doOnError(error -> log.error("Error al crear observación para equipo {}: {}", 
+                    request.getEquipoId(), error.getMessage()));
     }
 
+    @Override
+    public Mono<ObservacionEquipoResponse> updateObservacion(Integer observacionId, ObservacionEquipoUpdateRequest request) {
+        log.info("Actualizando observación con ID: {}", observacionId);
+        
+        // Validaciones de entrada
+        return Mono.fromCallable(() -> validateUpdateRequest(observacionId, request))
+                .subscribeOn(Schedulers.boundedElastic())
+                .flatMap(validatedRequest -> 
+                    observacionEquipoRepository.findById(observacionId)
+                        .switchIfEmpty(Mono.error(ObservacionUpdateException.notFound(observacionId)))
+                )
+                .flatMap(existingObservacion ->
+                    validateBusinessRules(existingObservacion, request)
+                        .then(Mono.fromCallable(() -> applyUpdates(existingObservacion, request))
+                            .subscribeOn(Schedulers.boundedElastic()))
+                )
+                .flatMap(updatedObservacion ->
+                    observacionEquipoRepository.save(updatedObservacion)
+                        .onErrorMap(error -> ObservacionUpdateException.databaseError("actualizar observación", error))
+                )
+                .flatMap(this::enrichObservacionWithRelations)
+                .doOnSuccess(response -> log.info("Observación actualizada exitosamente con ID: {}", response.getId()))
+                .doOnError(error -> log.error("Error al actualizar observación con ID {}: {}", observacionId, error.getMessage()));
+    }
+
+    @Override
     public Mono<Integer> updateEstadoObservacionesByEquipoId(Integer equipoId, Integer nuevoEstadoId) {
+        log.info("Iniciando actualización masiva de estado para equipo {}", equipoId);
+        
+        // Validación de parámetros
+        if (equipoId == null || equipoId <= 0) {
+            return Mono.error(new ObservacionEquipoException(
+                    "FLEET-OBS-VAL-001", "ID de equipo inválido: " + equipoId));
+        }
+        if (nuevoEstadoId == null || nuevoEstadoId <= 0) {
+            return Mono.error(new ObservacionEquipoException(
+                    "FLEET-OBS-VAL-002", "ID de estado inválido: " + nuevoEstadoId));
+        }
+        
         return observacionEquipoRepository.updateEstadoByEquipoId(equipoId, nuevoEstadoId)
-                .doOnSubscribe(s -> log.debug("Iniciando actualización masiva para equipo {}", equipoId))
+                .doOnSubscribe(s -> log.info("Iniciando actualización masiva para equipo {}", equipoId))
                 .doOnSuccess(count -> log.info("Actualizadas {} observaciones para el equipo {}", count, equipoId))
                 .doOnError(error -> log.error("Error al actualizar estados de observaciones para equipo {}: {}",
                         equipoId, error.getMessage()))
-                .onErrorResume(e -> Mono.error(new ObservacionEquipoException(
-                        "FLEET-OBS-OPE-003", "Error al actualizar estado de observaciones para equipo " + equipoId)));
+                .onErrorMap(error -> new ObservacionEquipoException(
+                        "FLEET-OBS-OPE-003", "Error al actualizar estado de observaciones para equipo " + equipoId));
     }
 
     private Mono<ObservacionEquipoResponse> enrichObservacionWithRelations(ObservacionEquipo observacion) {
-        Mono<TipoObservacionNeumaticoResponse> tipoMono = tipoObservacionNeumaticoService
-                .getAllTipoObservacionNeumatico()
-                .filter(tipo -> tipo.getId().equals(observacion.getTipoObservacionId()))
-                .next()
-                .switchIfEmpty(Mono.error(new ResourceNotFoundException("Tipo de observación",
-                        observacion.getTipoObservacionId().toString())));
+        log.debug("Enriqueciendo observación: {}", observacion.getId());
+        
+        // Obtener las entidades relacionadas de forma paralela usando cache
+        Mono<TipoObservacionResponse> tipoObservacionMono = observacion.getTipoObservacionId() != null ?
+                observacionMasterDataCacheService.getTipoObservacion(observacion.getTipoObservacionId())
+                    .onErrorMap(error -> ObservacionCreationException.masterDataError("obtener tipo observacion", error))
+                    .subscribeOn(Schedulers.boundedElastic()) :
+                Mono.just(TipoObservacionResponse.builder().build());
 
-        Mono<EstadoObservacionResponse> estadoMono = estadoObservacionService
-                .getAllEstadoObservacion()
-                .filter(estado -> estado.getId().equals(observacion.getEstadoId()))
-                .next()
-                .switchIfEmpty(Mono.error(new ResourceNotFoundException("Estado de observación",
-                        observacion.getEstadoId().toString())));
+        Mono<EstadoObservacionResponse> estadoObservacionMono = observacion.getEstadoId() != null ?
+                observacionMasterDataCacheService.getEstadoObservacion(observacion.getEstadoId())
+                    .onErrorMap(error -> ObservacionCreationException.masterDataError("obtener estado observacion", error))
+                    .subscribeOn(Schedulers.boundedElastic()) :
+                Mono.just(EstadoObservacionResponse.builder().build());
 
-        return Mono.zip(tipoMono, estadoMono)
-                .flatMap(tuple -> Mono.fromCallable(() ->
-                                mapEntityToResponse(observacion, tuple.getT1(), tuple.getT2()))
-                        .subscribeOn(Schedulers.boundedElastic()));
-    }
-
-    private ObservacionEquipo mapRequestToEntity(ObservacionEquipoRequest request) {
-        return ObservacionEquipo.builder()
-                .equipoId(request.getEquipoId())
-                .fecha(request.getFecha())
-                .tipoObservacionId(request.getTipoObservacionId())
-                .descripcion(request.getDescripcion())
-                .estadoId(request.getEstadoId())
-                .fechaResolucion(request.getFechaResolucion())
-                .comentarioResolucion(request.getComentarioResolucion())
-                .usuarioResolucion(request.getUsuarioResolucion())
-                .usuarioId(request.getUsuarioId())
-                .build();
+        // Combinar los resultados
+        return Mono.zip(tipoObservacionMono, estadoObservacionMono)
+                .flatMap(tuple -> 
+                    Mono.fromCallable(() -> mapEntityToResponse(observacion, tuple.getT1(), tuple.getT2()))
+                        .subscribeOn(Schedulers.boundedElastic())
+                )
+                .onErrorMap(error -> new ObservacionEquipoException(
+                        "FLEET-OBS-ENR-001", 
+                        "Error al enriquecer observación con ID: " + observacion.getId()
+                ));
     }
 
     private ObservacionEquipoResponse mapEntityToResponse(
             ObservacionEquipo entity,
-            TipoObservacionNeumaticoResponse tipo,
+            TipoObservacionResponse tipo,
             EstadoObservacionResponse estado) {
 
         return ObservacionEquipoResponse.builder()
                 .id(entity.getId())
                 .equipoId(entity.getEquipoId())
                 .fecha(entity.getFecha())
-                .tipoObservacionNeumaticoResponse(tipo)
+                .tipoObservacionResponse(tipo)
                 .descripcion(entity.getDescripcion())
                 .estadoObservacionResponse(estado)
                 .fechaResolucion(entity.getFechaResolucion())
@@ -136,15 +198,130 @@ public class ObservacionEquipoServiceImpl implements ObservacionEquipoService {
                 .build();
     }
 
-    private void updateEntityFromRequest(ObservacionEquipo entity, ObservacionEquipoRequest request) {
-        if (request.getEquipoId() != null) entity.setEquipoId(request.getEquipoId());
-        if (request.getFecha() != null) entity.setFecha(request.getFecha());
-        if (request.getTipoObservacionId() != null) entity.setTipoObservacionId(request.getTipoObservacionId());
-        if (request.getDescripcion() != null) entity.setDescripcion(request.getDescripcion());
-        if (request.getEstadoId() != null) entity.setEstadoId(request.getEstadoId());
-        if (request.getFechaResolucion() != null) entity.setFechaResolucion(request.getFechaResolucion());
-        if (request.getComentarioResolucion() != null) entity.setComentarioResolucion(request.getComentarioResolucion());
-        if (request.getUsuarioResolucion() != null) entity.setUsuarioResolucion(request.getUsuarioResolucion());
-        if (request.getUsuarioId() != null) entity.setUsuarioId(request.getUsuarioId());
+    private ObservacionEquipoNuevoRequest validateObservacionRequest(ObservacionEquipoNuevoRequest request) {
+        if (request == null) {
+            throw ObservacionCreationException.invalidRequest("request", "null");
+        }
+        if (request.getEquipoId() == null || request.getEquipoId() <= 0) {
+            throw ObservacionCreationException.invalidRequest("equipoId", request.getEquipoId());
+        }
+        if (request.getTipoObservacionId() == null || request.getTipoObservacionId() <= 0) {
+            throw ObservacionCreationException.invalidRequest("tipoObservacionId", request.getTipoObservacionId());
+        }
+        if (request.getDescripcion() == null || request.getDescripcion().trim().isEmpty()) {
+            throw ObservacionCreationException.invalidRequest("descripcion", request.getDescripcion());
+        }
+        if (request.getUsuarioId() == null || request.getUsuarioId() <= 0) {
+            throw ObservacionCreationException.invalidRequest("usuarioId", request.getUsuarioId());
+        }
+        return request;
+    }
+    
+    private ObservacionEquipo buildObservacionEntity(ObservacionEquipoNuevoRequest request, Integer estadoPendienteId) {
+        return ObservacionEquipo.builder()
+                .equipoId(request.getEquipoId())
+                .fecha(LocalDateTime.now(ZoneId.of("America/Lima")))
+                .tipoObservacionId(request.getTipoObservacionId())
+                .descripcion(request.getDescripcion().trim())
+                .estadoId(estadoPendienteId)
+                .fechaResolucion(null)
+                .comentarioResolucion(null)
+                .usuarioResolucion(null)
+                .usuarioId(request.getUsuarioId())
+                .build();
+    }
+
+    private ObservacionEquipoUpdateRequest validateUpdateRequest(Integer observacionId, ObservacionEquipoUpdateRequest request) {
+        if (observacionId == null || observacionId <= 0) {
+            throw ObservacionUpdateException.invalidRequest("observacionId", observacionId);
+        }
+        if (request == null) {
+            throw ObservacionUpdateException.invalidRequest("request", "null");
+        }
+        // Validar que al menos un campo está presente para actualizar
+        if (request.getEstadoObservacionId() == null && 
+            request.getUsuarioResolucionId() == null && 
+            (request.getComentarioResolucion() == null || request.getComentarioResolucion().trim().isEmpty())) {
+            throw ObservacionUpdateException.noFieldsToUpdate();
+        }
+        // Validar campos específicos si están presentes
+        if (request.getEstadoObservacionId() != null && request.getEstadoObservacionId() <= 0) {
+            throw ObservacionUpdateException.invalidRequest("estadoObservacionId", request.getEstadoObservacionId());
+        }
+        if (request.getUsuarioResolucionId() != null && request.getUsuarioResolucionId() <= 0) {
+            throw ObservacionUpdateException.invalidRequest("usuarioResolucionId", request.getUsuarioResolucionId());
+        }
+        return request;
+    }
+    
+    private ObservacionEquipo applyUpdates(ObservacionEquipo existing, ObservacionEquipoUpdateRequest request) {
+        ObservacionEquipo.ObservacionEquipoBuilder builder = existing.toBuilder();
+        
+        // Si se está cambiando el estado de observación
+        if (request.getEstadoObservacionId() != null) {
+            builder.estadoId(request.getEstadoObservacionId())
+                   .fechaResolucion(LocalDateTime.now(ZoneId.of("America/Lima")))
+                   .usuarioResolucion(request.getUsuarioResolucionId());
+        }
+        
+        // Actualizar comentario de resolución si se proporciona
+        if (request.getComentarioResolucion() != null) {
+            builder.comentarioResolucion(request.getComentarioResolucion().trim());
+        }
+        
+        return builder.build();
+    }
+    
+    private Mono<Void> validateBusinessRules(ObservacionEquipo existing, ObservacionEquipoUpdateRequest request) {
+        return observacionMasterDataCacheService.getEstadoObservacion(existing.getEstadoId())
+                .flatMap(currentState -> {
+                    String currentStateName = currentState.getNombre();
+                    
+                    // Verificar si el estado actual es final (no se puede modificar)
+                    if (EstadoObservacionConstants.RESUELTO.equalsIgnoreCase(currentStateName)) {
+                        return Mono.error(ObservacionUpdateException.finalStateModification(currentStateName));
+                    }
+                    if (EstadoObservacionConstants.CANCELADO.equalsIgnoreCase(currentStateName)) {
+                        return Mono.error(ObservacionUpdateException.finalStateModification(currentStateName));
+                    }
+                    
+                    // Si se está cambiando el estado, validar la transición
+                    if (request.getEstadoObservacionId() != null && 
+                        !request.getEstadoObservacionId().equals(existing.getEstadoId())) {
+                        
+                        return observacionMasterDataCacheService.getEstadoObservacion(request.getEstadoObservacionId())
+                                .flatMap(newState -> {
+                                    String newStateName = newState.getNombre();
+                                    
+                                    // Validar transiciones permitidas desde "Pendiente"
+                                    if (EstadoObservacionConstants.PENDIENTE.equalsIgnoreCase(currentStateName)) {
+                                        // Desde Pendiente solo se puede ir a Resuelta o Cancelada
+                                        if (EstadoObservacionConstants.RESUELTO.equalsIgnoreCase(newStateName) ||
+                                            EstadoObservacionConstants.CANCELADO.equalsIgnoreCase(newStateName)) {
+                                            return Mono.<Void>empty();
+                                        } else {
+                                            return Mono.error(ObservacionUpdateException.stateTransitionNotAllowed(currentStateName, newStateName));
+                                        }
+                                    }
+                                    
+                                    // Para cualquier otro estado, no permitir cambios
+                                    return Mono.error(ObservacionUpdateException.stateTransitionNotAllowed(currentStateName, newStateName));
+                                })
+                                .onErrorMap(error -> {
+                                    if (error instanceof ObservacionUpdateException) {
+                                        return error;
+                                    }
+                                    return ObservacionUpdateException.masterDataError("obtener nuevo estado observacion", error);
+                                });
+                    }
+                    
+                    return Mono.<Void>empty();
+                })
+                .onErrorMap(error -> {
+                    if (error instanceof ObservacionUpdateException) {
+                        return error;
+                    }
+                    return ObservacionUpdateException.masterDataError("obtener estado observacion actual", error);
+                });
     }
 }
