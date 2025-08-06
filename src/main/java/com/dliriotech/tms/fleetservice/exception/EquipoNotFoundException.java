@@ -1,7 +1,11 @@
 package com.dliriotech.tms.fleetservice.exception;
 
-public class EquipoNotFoundException extends ResourceNotFoundException {
+import org.springframework.http.HttpStatus;
+
+public class EquipoNotFoundException extends BaseException {
     public EquipoNotFoundException(String id) {
-        super("Equipo", id);
+        super("Equipo con id " + id + " no encontrado",
+                HttpStatus.NOT_FOUND,
+                "FLEET-EQP-NFD-001");
     }
 }
