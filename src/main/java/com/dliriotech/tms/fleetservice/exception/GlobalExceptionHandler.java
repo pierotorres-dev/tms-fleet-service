@@ -50,6 +50,9 @@ class GlobalExceptionHandler extends AbstractErrorWebExceptionHandler {
             return new ErrorDetails(baseEx.getStatus(), baseEx.getCode(), baseEx.getMessage());
         });
 
+        handlers.put(EquipoNotFoundException.class, ex ->
+                new ErrorDetails(HttpStatus.NOT_FOUND, ((BaseException) ex).getCode(), ex.getMessage()));
+
         handlers.put(CacheOperationException.class, ex ->
                 new ErrorDetails(HttpStatus.INTERNAL_SERVER_ERROR, ((BaseException) ex).getCode(), ex.getMessage()));
 
