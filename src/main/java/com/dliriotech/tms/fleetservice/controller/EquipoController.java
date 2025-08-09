@@ -37,6 +37,11 @@ public class EquipoController {
         return equipoService.getEquipoById(id);
     }
 
+    @GetMapping(value = "/{id}/con-observaciones", produces = MediaType.APPLICATION_JSON_VALUE)
+    public Mono<EquipoConObservacionesResponse> getEquipoConObservacionesById(@PathVariable Integer id) {
+        return equipoService.getEquipoConObservacionesById(id);
+    }
+
     @PostMapping(produces = MediaType.APPLICATION_JSON_VALUE)
     @ResponseStatus(HttpStatus.CREATED)
     public Mono<EquipoResponse> saveEquipo(@Valid @RequestBody EquipoNuevoRequest request) {

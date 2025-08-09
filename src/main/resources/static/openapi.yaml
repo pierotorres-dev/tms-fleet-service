@@ -26,7 +26,7 @@ paths:
       operationId: getAllTipoObservacionNeumatico
       responses:
         '200':
-          description: Lista de tipos de observación de neumático
+          description: Lista de tipos de observación de neumático (puede ser vacía)
           content:
             application/json:
               schema:
@@ -44,7 +44,7 @@ paths:
       operationId: getAllTipoObservacionEquipo
       responses:
         '200':
-          description: Lista de tipos de observación de equipos
+          description: Lista de tipos de observación de equipos (puede ser vacía)
           content:
             application/json:
               schema:
@@ -62,7 +62,7 @@ paths:
       operationId: getAllEstadoObservacion
       responses:
         '200':
-          description: Lista de estados de observación
+          description: Lista de estados de observación (puede ser vacía)
           content:
             application/json:
               schema:
@@ -80,7 +80,7 @@ paths:
       operationId: getAllEstadoEquipo
       responses:
         '200':
-          description: Lista de estados de equipo
+          description: Lista de estados de equipo (puede ser vacía)
           content:
             application/json:
               schema:
@@ -106,7 +106,7 @@ paths:
             format: int32
       responses:
         '200':
-          description: Lista de equipos
+          description: Lista de equipos (puede ser vacía si no hay equipos para la empresa)
           content:
             application/json:
               schema:
@@ -124,6 +124,7 @@ paths:
       description: |
         Retorna la lista de equipos de una empresa específica incluyendo un conteo detallado
         de las observaciones pendientes desglosado por tipo (equipo, neumático y total).
+        Si no hay equipos para la empresa, retorna un array vacío.
       operationId: getAllEquiposConObservacionesByEmpresaId
       parameters:
         - name: empresaId
@@ -135,7 +136,7 @@ paths:
             format: int32
       responses:
         '200':
-          description: Lista de equipos con conteo detallado de observaciones pendientes
+          description: Lista de equipos con conteo detallado de observaciones pendientes (puede ser vacía)
           content:
             application/json:
               schema:
@@ -170,6 +171,33 @@ paths:
           $ref: '#/components/responses/NotFoundResponse'
         '500':
           $ref: '#/components/responses/ErrorResponse'
+
+  /api/v1/equipos/{id}/con-observaciones:
+    get:
+      summary: Get equipment with observations by ID
+      description: Retrieves equipment details including associated observations by its ID
+      operationId: getEquipoConObservacionesById
+      tags:
+        - equipos
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID of the equipment
+          schema:
+            type: integer
+            format: int32
+      responses:
+        '200':
+          description: Equipment with observations found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EquipoConObservacionesResponse'
+        '404':
+          description: Equipment not found
+        '500':
+          description: Internal server error
 
   /api/v1/equipos/{id}/configuracion:
     patch:
@@ -280,6 +308,7 @@ paths:
       description: |
         Obtiene todas las observaciones de un equipo específico. Si se proporciona el parámetro 
         'estado=pendiente', retorna solo las observaciones pendientes.
+        Si no hay observaciones para el equipo, retorna un array vacío.
       operationId: getObservacionesByEquipo
       parameters:
         - name: equipoId
@@ -297,7 +326,7 @@ paths:
             type: string
       responses:
         '200':
-          description: Lista de observaciones del equipo
+          description: Lista de observaciones del equipo (puede ser vacía)
           content:
             application/json:
               schema:
@@ -409,7 +438,7 @@ paths:
       operationId: getAllTiposEquipo
       responses:
         '200':
-          description: Lista de todos los tipos de equipos
+          description: Lista de todos los tipos de equipos (puede ser vacía)
           content:
             application/json:
               schema:
@@ -435,7 +464,7 @@ paths:
             format: int32
       responses:
         '200':
-          description: Lista de tipos de equipos activos
+          description: Lista de tipos de equipos activos (puede ser vacía si la empresa no tiene equipos)
           content:
             application/json:
               schema:
@@ -461,7 +490,7 @@ paths:
             format: int32
       responses:
         '200':
-          description: Lista de esquemas de equipo
+          description: Lista de esquemas de equipo (puede ser vacía si no hay esquemas para el tipo)
           content:
             application/json:
               schema:
@@ -750,7 +779,7 @@ components:
         fecha:
           type: string
           format: date-time
-        TipoObservacionResponse:
+        tipoObservacionResponse:
           $ref: '#/components/schemas/TipoObservacionResponse'
         descripcion:
           type: string
@@ -771,7 +800,7 @@ components:
         - id
         - equipoId
         - fecha
-        - TipoObservacionResponse
+        - tipoObservacionResponse
         - estadoObservacionResponse
 
     ErrorResponse:

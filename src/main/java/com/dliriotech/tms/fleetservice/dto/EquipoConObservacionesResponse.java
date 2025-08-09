@@ -1,5 +1,6 @@
 package com.dliriotech.tms.fleetservice.dto;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -17,8 +18,10 @@ public class EquipoConObservacionesResponse {
     private String negocio;
     private TipoEquipoResponse tipoEquipoResponse;
     private EsquemaEquipoResponse esquemaEquipoResponse;
+    @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate fechaInspeccion;
     private Integer kilometraje;
+    @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate fechaActualizacionKilometraje;
     private EstadoEquipoResponse estadoEquipoResponse;
     private Integer empresaId;
