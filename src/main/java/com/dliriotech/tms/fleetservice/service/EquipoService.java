@@ -12,6 +12,7 @@ public interface EquipoService {
     Flux<EquipoResponse> getAllEquiposByEmpresaId(Integer empresaId);
     Flux<EquipoConObservacionesResponse> getAllEquiposConObservacionesByEmpresaId(Integer empresaId);
     Mono<EquipoResponse> getEquipoById(Integer id);
+    Mono<EquipoConObservacionesResponse> getEquipoConObservacionesById(Integer id);
     Mono<EquipoResponse> saveEquipo(EquipoNuevoRequest equipoNuevoRequest);
     Mono<EquipoResponse> updateEquipo(Integer id, EquipoUpdateRequest request);
     Mono<EquipoResponse> updateEquipoKilometraje(Integer id, EquipoUpdateKilometrajeRequest request);

@@ -26,7 +26,7 @@ paths:
       operationId: getAllTipoObservacionNeumatico
       responses:
         '200':
-          description: Lista de tipos de observación de neumático
+          description: Lista de tipos de observación de neumático (puede ser vacía)
           content:
             application/json:
               schema:
@@ -44,7 +44,7 @@ paths:
       operationId: getAllTipoObservacionEquipo
       responses:
         '200':
-          description: Lista de tipos de observación de equipos
+          description: Lista de tipos de observación de equipos (puede ser vacía)
           content:
             application/json:
               schema:
@@ -62,7 +62,7 @@ paths:
       operationId: getAllEstadoObservacion
       responses:
         '200':
-          description: Lista de estados de observación
+          description: Lista de estados de observación (puede ser vacía)
           content:
             application/json:
               schema:
@@ -80,7 +80,7 @@ paths:
       operationId: getAllEstadoEquipo
       responses:
         '200':
-          description: Lista de estados de equipo
+          description: Lista de estados de equipo (puede ser vacía)
           content:
             application/json:
               schema:
@@ -106,7 +106,7 @@ paths:
             format: int32
       responses:
         '200':
-          description: Lista de equipos
+          description: Lista de equipos (puede ser vacía si no hay equipos para la empresa)
           content:
             application/json:
               schema:
@@ -124,6 +124,7 @@ paths:
       description: |
         Retorna la lista de equipos de una empresa específica incluyendo un conteo detallado
         de las observaciones pendientes desglosado por tipo (equipo, neumático y total).
+        Si no hay equipos para la empresa, retorna un array vacío.
       operationId: getAllEquiposConObservacionesByEmpresaId
       parameters:
         - name: empresaId
@@ -135,7 +136,7 @@ paths:
             format: int32
       responses:
         '200':
-          description: Lista de equipos con conteo detallado de observaciones pendientes
+          description: Lista de equipos con conteo detallado de observaciones pendientes (puede ser vacía)
           content:
             application/json:
               schema:
@@ -166,6 +167,33 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/EquipoResponse'
+        '404':
+          $ref: '#/components/responses/NotFoundResponse'
+        '500':
+          $ref: '#/components/responses/ErrorResponse'
+
+  /api/v1/equipos/{id}/con-observaciones:
+    get:
+      tags:
+        - Equipos
+      summary: Obtiene un equipo con observaciones por su ID
+      description: Obtiene los detalles de un equipo específico incluyendo el conteo detallado de observaciones pendientes
+      operationId: getEquipoConObservacionesById
+      parameters:
+        - name: id
+          in: path
+          description: ID del equipo
+          required: true
+          schema:
+            type: integer
+            format: int32
+      responses:
+        '200':
+          description: Equipo con observaciones encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EquipoConObservacionesResponse'
         '404':
           $ref: '#/components/responses/NotFoundResponse'
         '500':
@@ -280,6 +308,7 @@ paths:
       description: |
         Obtiene todas las observaciones de un equipo específico. Si se proporciona el parámetro 
         'estado=pendiente', retorna solo las observaciones pendientes.
+        Si no hay observaciones para el equipo, retorna un array vacío.
       operationId: getObservacionesByEquipo
       parameters:
         - name: equipoId
@@ -297,7 +326,7 @@ paths:
             type: string
       responses:
         '200':
-          description: Lista de observaciones del equipo
+          description: Lista de observaciones del equipo (puede ser vacía)
           content:
             application/json:
               schema:
@@ -369,38 +398,6 @@ paths:
         '500':
           $ref: '#/components/responses/ErrorResponse'
 
-  /api/v1/observaciones-equipo/equipo/{equipoId}/estado/{estadoId}:
-    patch:
-      tags:
-        - Observaciones
-      summary: Actualiza el estado de todas las observaciones de un equipo
-      operationId: updateEstadoObservacionesByEquipoId
-      parameters:
-        - name: equipoId
-          in: path
-          description: ID del equipo
-          required: true
-          schema:
-            type: integer
-            format: int32
-        - name: estadoId
-          in: path
-          description: ID del nuevo estado
-          required: true
-          schema:
-            type: integer
-            format: int32
-      responses:
-        '200':
-          description: Número de observaciones actualizadas
-          content:
-            application/json:
-              schema:
-                type: integer
-                format: int32
-        '500':
-          $ref: '#/components/responses/ErrorResponse'
-
   /api/v1/empresas/tipos-equipos-total:
     get:
       tags:
@@ -409,7 +406,7 @@ paths:
       operationId: getAllTiposEquipo
       responses:
         '200':
-          description: Lista de todos los tipos de equipos
+          description: Lista de todos los tipos de equipos (puede ser vacía)
           content:
             application/json:
               schema:
@@ -435,7 +432,7 @@ paths:
             format: int32
       responses:
         '200':
-          description: Lista de tipos de equipos activos
+          description: Lista de tipos de equipos activos (puede ser vacía si la empresa no tiene equipos)
           content:
             application/json:
               schema:
@@ -461,7 +458,7 @@ paths:
             format: int32
       responses:
         '200':
-          description: Lista de esquemas de equipo
+          description: Lista de esquemas de equipo (puede ser vacía si no hay esquemas para el tipo)
           content:
             application/json:
               schema:
@@ -705,39 +702,6 @@ components:
           format: int32
           description: ID del usuario que resuelve la observación
 
-    ObservacionEquipoRequest:
-      type: object
-      properties:
-        equipoId:
-          type: integer
-          format: int32
-        fecha:
-          type: string
-          format: date-time
-        tipoObservacionId:
-          type: integer
-          format: int32
-        descripcion:
-          type: string
-        estadoId:
-          type: integer
-          format: int32
-        fechaResolucion:
-          type: string
-          format: date-time
-        comentarioResolucion:
-          type: string
-        usuarioResolucion:
-          type: integer
-          format: int32
-        usuarioId:
-          type: integer
-          format: int32
-      required:
-        - equipoId
-        - tipoObservacionId
-        - estadoId
-
     ObservacionEquipoResponse:
       type: object
       properties:
@@ -750,7 +714,8 @@ components:
         fecha:
           type: string
           format: date-time
-        TipoObservacionResponse:
+          description: Fecha de creación de la observación en formato yyyy-MM-dd HH:mm:ss
+        tipoObservacionResponse:
           $ref: '#/components/schemas/TipoObservacionResponse'
         descripcion:
           type: string
@@ -759,19 +724,19 @@ components:
         fechaResolucion:
           type: string
           format: date-time
+          description: Fecha de resolución de la observación en formato yyyy-MM-dd HH:mm:ss
         comentarioResolucion:
           type: string
         usuarioResolucion:
           type: integer
           format: int32
-        usuarioId:
-          type: integer
-          format: int32
+        usuarioInfo:
+          $ref: '#/components/schemas/UserInfoResponse'
       required:
         - id
         - equipoId
         - fecha
-        - TipoObservacionResponse
+        - tipoObservacionResponse
         - estadoObservacionResponse
 
     ErrorResponse:
@@ -821,6 +786,21 @@ components:
         - id
         - nombreEsquema
         - totalPosiciones
+
+    UserInfoResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int32
+        name:
+          type: string
+        lastName:
+          type: string
+        fullName:
+          type: string
+      required:
+        - id
 
   responses:
     ErrorResponse:

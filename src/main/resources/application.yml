@@ -73,12 +73,15 @@ springdoc:
 app:
   cache:
     ttl-hours: 24
+    user-info:
+      ttl-hours: 48
     prefixes:
       estado-equipo: "cache:estadoEquipo:all"
       estado-observacion: "cache:estadoObservacion:all"
       tipo-observacion-neumatico: "cache:tipoObservacionNeumatico:all"
       tipo-equipo: "cache:tipoEquipo"
       esquema-equipo: "cache:esquemaEquipo"
+      user-info: "cache:userInfo"
 
 server:
   port: 8082

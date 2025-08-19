@@ -67,6 +67,16 @@ public class EquipoServiceImpl implements EquipoService {
     }
 
     @Override
+    public Mono<EquipoConObservacionesResponse> getEquipoConObservacionesById(Integer id) {
+        return equipoRepository.findById(id)
+                .switchIfEmpty(Mono.error(new EquipoNotFoundException(id.toString())))
+                .flatMap(this::enrichEquipoWithObservaciones)
+                .doOnSubscribe(s -> log.info("Iniciando consulta de equipo con observaciones {}", id))
+                .doOnSuccess(result -> log.info("Consulta de equipo con observaciones {} completada", id))
+                .doOnError(error -> log.error("Error al obtener equipo con observaciones {}: {}", id, error.getMessage()));
+    }
+
+    @Override
     public Mono<EquipoResponse> saveEquipo(EquipoNuevoRequest equipoNuevoRequest) {
         Equipo entity = mapRequestToEntity(equipoNuevoRequest);
 
