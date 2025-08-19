@@ -9,10 +9,9 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class ObservacionEquipoUpdateRequest {
-    private Integer estadoObservacionId;
-
-    private String comentarioResolucion;
-
-    private Integer usuarioResolucionId;
+public class UserInfoResponse {
+    private Integer id;
+    private String name;
+    private String lastName;
+    private String fullName;
 }

@@ -174,30 +174,30 @@ paths:
 
   /api/v1/equipos/{id}/con-observaciones:
     get:
-      summary: Get equipment with observations by ID
-      description: Retrieves equipment details including associated observations by its ID
-      operationId: getEquipoConObservacionesById
       tags:
-        - equipos
+        - Equipos
+      summary: Obtiene un equipo con observaciones por su ID
+      description: Obtiene los detalles de un equipo específico incluyendo el conteo detallado de observaciones pendientes
+      operationId: getEquipoConObservacionesById
       parameters:
         - name: id
           in: path
+          description: ID del equipo
           required: true
-          description: ID of the equipment
           schema:
             type: integer
             format: int32
       responses:
         '200':
-          description: Equipment with observations found
+          description: Equipo con observaciones encontrado
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/EquipoConObservacionesResponse'
         '404':
-          description: Equipment not found
+          $ref: '#/components/responses/NotFoundResponse'
         '500':
-          description: Internal server error
+          $ref: '#/components/responses/ErrorResponse'
 
   /api/v1/equipos/{id}/configuracion:
     patch:
@@ -395,38 +395,6 @@ paths:
                 $ref: '#/components/schemas/ObservacionEquipoResponse'
         '404':
           $ref: '#/components/responses/NotFoundResponse'
-        '500':
-          $ref: '#/components/responses/ErrorResponse'
-
-  /api/v1/observaciones-equipo/equipo/{equipoId}/estado/{estadoId}:
-    patch:
-      tags:
-        - Observaciones
-      summary: Actualiza el estado de todas las observaciones de un equipo
-      operationId: updateEstadoObservacionesByEquipoId
-      parameters:
-        - name: equipoId
-          in: path
-          description: ID del equipo
-          required: true
-          schema:
-            type: integer
-            format: int32
-        - name: estadoId
-          in: path
-          description: ID del nuevo estado
-          required: true
-          schema:
-            type: integer
-            format: int32
-      responses:
-        '200':
-          description: Número de observaciones actualizadas
-          content:
-            application/json:
-              schema:
-                type: integer
-                format: int32
         '500':
           $ref: '#/components/responses/ErrorResponse'
 
@@ -734,39 +702,6 @@ components:
           format: int32
           description: ID del usuario que resuelve la observación
 
-    ObservacionEquipoRequest:
-      type: object
-      properties:
-        equipoId:
-          type: integer
-          format: int32
-        fecha:
-          type: string
-          format: date-time
-        tipoObservacionId:
-          type: integer
-          format: int32
-        descripcion:
-          type: string
-        estadoId:
-          type: integer
-          format: int32
-        fechaResolucion:
-          type: string
-          format: date-time
-        comentarioResolucion:
-          type: string
-        usuarioResolucion:
-          type: integer
-          format: int32
-        usuarioId:
-          type: integer
-          format: int32
-      required:
-        - equipoId
-        - tipoObservacionId
-        - estadoId
-
     ObservacionEquipoResponse:
       type: object
       properties:
@@ -779,6 +714,7 @@ components:
         fecha:
           type: string
           format: date-time
+          description: Fecha de creación de la observación en formato yyyy-MM-dd HH:mm:ss
         tipoObservacionResponse:
           $ref: '#/components/schemas/TipoObservacionResponse'
         descripcion:
@@ -788,14 +724,14 @@ components:
         fechaResolucion:
           type: string
           format: date-time
+          description: Fecha de resolución de la observación en formato yyyy-MM-dd HH:mm:ss
         comentarioResolucion:
           type: string
         usuarioResolucion:
           type: integer
           format: int32
-        usuarioId:
-          type: integer
-          format: int32
+        usuarioInfo:
+          $ref: '#/components/schemas/UserInfoResponse'
       required:
         - id
         - equipoId
@@ -850,6 +786,21 @@ components:
         - id
         - nombreEsquema
         - totalPosiciones
+
+    UserInfoResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int32
+        name:
+          type: string
+        lastName:
+          type: string
+        fullName:
+          type: string
+      required:
+        - id
 
   responses:
     ErrorResponse:

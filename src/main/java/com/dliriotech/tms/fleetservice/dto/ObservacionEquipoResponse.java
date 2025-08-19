@@ -24,5 +24,5 @@ public class ObservacionEquipoResponse {
     private LocalDateTime fechaResolucion;
     private String comentarioResolucion;
     private Integer usuarioResolucion;
-    private Integer usuarioId;
+    private UserInfoResponse usuarioInfo;
 }

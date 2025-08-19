@@ -9,6 +9,7 @@ import com.dliriotech.tms.fleetservice.exception.ObservacionUpdateException;
 import com.dliriotech.tms.fleetservice.repository.ObservacionEquipoRepository;
 import com.dliriotech.tms.fleetservice.service.ObservacionEquipoService;
 import com.dliriotech.tms.fleetservice.service.ObservacionMasterDataCacheService;
+import com.dliriotech.tms.fleetservice.service.UserEntityCacheService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -26,6 +27,7 @@ public class ObservacionEquipoServiceImpl implements ObservacionEquipoService {
 
     private final ObservacionEquipoRepository observacionEquipoRepository;
     private final ObservacionMasterDataCacheService observacionMasterDataCacheService;
+    private final UserEntityCacheService userEntityCacheService;
 
     @Override
     public Flux<ObservacionEquipoResponse> getAllObservacionesByEquipoId(Integer equipoId) {
@@ -43,7 +45,7 @@ public class ObservacionEquipoServiceImpl implements ObservacionEquipoService {
                 .doOnComplete(() -> log.info("Consulta a la lista de observaciones del equipo {} completada", equipoId))
                 .doOnError(error -> log.error("Error al obtener observaciones para el equipo {}: {}", equipoId, error.getMessage()))
                 .switchIfEmpty(Flux.defer(() -> {
-                    log.debug("No se encontraron observaciones para el equipo {}", equipoId);
+                    log.info("No se encontraron observaciones para el equipo {}", equipoId);
                     return Flux.empty();
                 }));
     }
@@ -69,7 +71,7 @@ public class ObservacionEquipoServiceImpl implements ObservacionEquipoService {
                 .doOnError(error -> log.error("Error al obtener observaciones pendientes para equipo {}: {}", 
                     equipoId, error.getMessage()))
                 .switchIfEmpty(Flux.defer(() -> {
-                    log.debug("No se encontraron observaciones pendientes para el equipo {}", equipoId);
+                    log.info("No se encontraron observaciones pendientes para el equipo {}", equipoId);
                     return Flux.empty();
                 }));
     }
@@ -152,7 +154,7 @@ public class ObservacionEquipoServiceImpl implements ObservacionEquipoService {
     }
 
     private Mono<ObservacionEquipoResponse> enrichObservacionWithRelations(ObservacionEquipo observacion) {
-        log.debug("Enriqueciendo observación: {}", observacion.getId());
+        log.info("Enriqueciendo observación: {}", observacion.getId());
         
         // Obtener las entidades relacionadas de forma paralela usando cache
         Mono<TipoObservacionResponse> tipoObservacionMono = observacion.getTipoObservacionId() != null ?
@@ -167,10 +169,23 @@ public class ObservacionEquipoServiceImpl implements ObservacionEquipoService {
                     .subscribeOn(Schedulers.boundedElastic()) :
                 Mono.just(EstadoObservacionResponse.builder().build());
 
+        // Obtener información del usuario que creó la observación usando cache
+        Mono<UserInfoResponse> usuarioInfoMono = observacion.getUsuarioId() != null ?
+                userEntityCacheService.getUserInfo(observacion.getUsuarioId())
+                    .doOnNext(userInfo -> log.info("Información de usuario {} obtenida para observación {}", 
+                        observacion.getUsuarioId(), observacion.getId()))
+                    .onErrorResume(error -> {
+                        log.warn("Error al obtener información del usuario {} para observación {}: {}", 
+                            observacion.getUsuarioId(), observacion.getId(), error.getMessage());
+                        return Mono.empty();
+                    })
+                    .subscribeOn(Schedulers.boundedElastic()) :
+                Mono.empty();
+
         // Combinar los resultados
-        return Mono.zip(tipoObservacionMono, estadoObservacionMono)
+        return Mono.zip(tipoObservacionMono, estadoObservacionMono, usuarioInfoMono)
                 .flatMap(tuple -> 
-                    Mono.fromCallable(() -> mapEntityToResponse(observacion, tuple.getT1(), tuple.getT2()))
+                    Mono.fromCallable(() -> mapEntityToResponse(observacion, tuple.getT1(), tuple.getT2(), tuple.getT3()))
                         .subscribeOn(Schedulers.boundedElastic())
                 )
                 .onErrorMap(error -> new ObservacionEquipoException(
@@ -182,7 +197,8 @@ public class ObservacionEquipoServiceImpl implements ObservacionEquipoService {
     private ObservacionEquipoResponse mapEntityToResponse(
             ObservacionEquipo entity,
             TipoObservacionResponse tipo,
-            EstadoObservacionResponse estado) {
+            EstadoObservacionResponse estado,
+            UserInfoResponse usuarioInfo) {
 
         return ObservacionEquipoResponse.builder()
                 .id(entity.getId())
@@ -194,7 +210,7 @@ public class ObservacionEquipoServiceImpl implements ObservacionEquipoService {
                 .fechaResolucion(entity.getFechaResolucion())
                 .comentarioResolucion(entity.getComentarioResolucion())
                 .usuarioResolucion(entity.getUsuarioResolucion())
-                .usuarioId(entity.getUsuarioId())
+                .usuarioInfo(usuarioInfo)
                 .build();
     }
 

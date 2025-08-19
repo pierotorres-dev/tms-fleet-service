@@ -46,10 +46,10 @@ public class ObservacionMasterDataCacheServiceImpl implements ObservacionMasterD
                                 .map(this::mapTipoObservacionToResponse)
                                 .flatMap(tipoResponse -> cacheEntity(cacheKey, tipoResponse, MASTER_DATA_TTL)
                                         .thenReturn(tipoResponse))
-                                .doOnSuccess(tipo -> log.debug("Tipo observación {} cargado desde BD y cacheado", tipoObservacionId))
+                                .doOnSuccess(tipo -> log.info("Tipo observación {} cargado desde BD y cacheado", tipoObservacionId))
                 )
                 .defaultIfEmpty(TipoObservacionResponse.builder().build())
-                .doOnNext(tipo -> log.debug("Tipo observación {} obtenido desde cache", tipoObservacionId))
+                .doOnNext(tipo -> log.info("Tipo observación {} obtenido desde cache", tipoObservacionId))
                 .onErrorResume(throwable -> {
                     log.error("Error al obtener tipo de observación {}: {}", tipoObservacionId, throwable.getMessage());
                     return Mono.just(TipoObservacionResponse.builder().build());
@@ -67,10 +67,10 @@ public class ObservacionMasterDataCacheServiceImpl implements ObservacionMasterD
                                 .map(this::mapEstadoObservacionToResponse)
                                 .flatMap(estadoResponse -> cacheEntity(cacheKey, estadoResponse, MASTER_DATA_TTL)
                                         .thenReturn(estadoResponse))
-                                .doOnSuccess(estado -> log.debug("Estado observación {} cargado desde BD y cacheado", estadoObservacionId))
+                                .doOnSuccess(estado -> log.info("Estado observación {} cargado desde BD y cacheado", estadoObservacionId))
                 )
                 .defaultIfEmpty(EstadoObservacionResponse.builder().build())
-                .doOnNext(estado -> log.debug("Estado observación {} obtenido desde cache", estadoObservacionId))
+                .doOnNext(estado -> log.info("Estado observación {} obtenido desde cache", estadoObservacionId))
                 .onErrorResume(throwable -> {
                     log.error("Error al obtener estado de observación {}: {}", estadoObservacionId, throwable.getMessage());
                     return Mono.just(EstadoObservacionResponse.builder().build());
@@ -104,7 +104,7 @@ public class ObservacionMasterDataCacheServiceImpl implements ObservacionMasterD
     public Mono<Void> invalidateTipoObservacionCache(Integer tipoObservacionId) {
         String cacheKey = TIPO_OBSERVACION_PREFIX + tipoObservacionId;
         return redisTemplate.delete(cacheKey)
-                .doOnSuccess(v -> log.debug("Cache de tipo observación {} invalidado", tipoObservacionId))
+                .doOnSuccess(v -> log.info("Cache de tipo observación {} invalidado", tipoObservacionId))
                 .then();
     }
 
@@ -112,7 +112,7 @@ public class ObservacionMasterDataCacheServiceImpl implements ObservacionMasterD
     public Mono<Void> invalidateEstadoObservacionCache(Integer estadoObservacionId) {
         String cacheKey = ESTADO_OBSERVACION_PREFIX + estadoObservacionId;
         return redisTemplate.delete(cacheKey)
-                .doOnSuccess(v -> log.debug("Cache de estado observación {} invalidado", estadoObservacionId))
+                .doOnSuccess(v -> log.info("Cache de estado observación {} invalidado", estadoObservacionId))
                 .then();
     }
 
